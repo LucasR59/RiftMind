@@ -1,0 +1,12 @@
+# Image de développement : le code source est monté en volume (voir compose.yaml),
+# node_modules reste dans l'image / un volume dédié (binaires Linux).
+FROM node:24-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

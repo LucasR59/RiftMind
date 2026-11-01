@@ -1,0 +1,10 @@
+# Image de développement : le code source est monté en volume (voir compose.yaml).
+# Les classes recompilées par l'IDE dans target/ déclenchent un redémarrage via DevTools.
+FROM eclipse-temurin:25-jdk
+
+WORKDIR /app
+
+EXPOSE 8080 5005
+
+CMD ["sh", "./mvnw", "spring-boot:run", \
+     "-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"]

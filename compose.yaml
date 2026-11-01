@@ -1,0 +1,80 @@
+# =============================================================
+# RiftMind - stack de développement local
+#
+#   docker compose up -d                   # postgres + backend + frontend
+#   docker compose --profile tools up -d   # + Adminer (UI base de données)
+#   docker compose up -d postgres          # uniquement la base (back/front lancés depuis l'IDE)
+#   docker compose logs -f backend
+#   docker compose --profile tools down    # stoppe tout, Adminer compris (garde les données)
+#   docker compose --profile tools down -v # stoppe et supprime les volumes (reset BDD)
+#
+# Les valeurs par défaut peuvent être surchargées dans un fichier .env (voir .env.example).
+# =============================================================
+name: riftmind
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-riftmind}
+      POSTGRES_USER: ${POSTGRES_USER:-riftmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-riftmind}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-riftmind}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-riftmind}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-riftmind}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_DEBUG_PORT:-5005}:5005" # debug distant (JDWP) depuis l'IDE
+    volumes:
+      - ./backend:/app
+      - maven-repo:/root/.m2 # cache des dépendances Maven entre deux démarrages
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_PROXY_TARGET: http://backend:8080
+      VITE_USE_POLLING: "true" # nécessaire pour le hot reload sur un volume monté depuis Windows/macOS
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules # node_modules Linux, isolé de celui de l'hôte
+    depends_on:
+      - backend
+
+  adminer:
+    image: adminer:latest
+    profiles: [tools]
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-data:
+  maven-repo:
+  frontend-node-modules:
