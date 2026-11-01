@@ -45,6 +45,7 @@ RiftMind/
 │       │   ├── TestcontainersConfiguration.java # PostgreSQL éphémère pour les tests
 │       │   ├── TestRiftMindApplication.java     # Lance l'app avec une BDD Testcontainers
 │       │   ├── controller/                      # Tests @WebMvcTest
+│       │   ├── db/                              # Tests des migrations Flyway (vrai PostgreSQL)
 │       │   └── riot/                            # Client Riot ; RiotFixtures lit les réponses de test
 │       └── test/resources/riot/                 # Vraies réponses Riot anonymisées (voir son README)
 └── frontend/
