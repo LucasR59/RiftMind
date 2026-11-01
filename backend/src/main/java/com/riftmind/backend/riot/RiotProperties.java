@@ -25,6 +25,8 @@ import jakarta.validation.constraints.Positive;
  * @param apiKey          clé API Riot, lue depuis la variable d'environnement {@code RIOT_API_KEY}
  * @param rateLimit       limites de requêtes appliquées à chaque hôte Riot (plateforme ou région)
  * @param refreshCooldown délai minimum entre deux mises à jour d'un même joueur
+ * @param connectTimeout  délai maximum pour se connecter à un serveur Riot
+ * @param readTimeout     délai maximum d'attente de la réponse de Riot
  */
 @Validated
 @ConfigurationProperties("riot")
@@ -32,7 +34,9 @@ public record RiotProperties(
         @NotBlank(message = "est vide : définir la variable d'environnement RIOT_API_KEY (voir README, section « Clé API Riot »)")
         String apiKey,
         @Valid @DefaultValue RateLimit rateLimit,
-        @NotNull @DefaultValue("2m") Duration refreshCooldown) {
+        @NotNull @DefaultValue("2m") Duration refreshCooldown,
+        @NotNull @DefaultValue("5s") Duration connectTimeout,
+        @NotNull @DefaultValue("10s") Duration readTimeout) {
 
     /**
      * Limites de requêtes, appliquées séparément à chaque hôte Riot.
@@ -65,7 +69,8 @@ public record RiotProperties(
     @Override
     public String toString() {
         return "RiotProperties[apiKey=" + maskedApiKey() + ", rateLimit=" + rateLimit
-                + ", refreshCooldown=" + refreshCooldown + "]";
+                + ", refreshCooldown=" + refreshCooldown + ", connectTimeout=" + connectTimeout
+                + ", readTimeout=" + readTimeout + "]";
     }
 
     /** Version masquée de la clé, utilisable dans les logs : {@code RGAPI-****…(42 caractères)}. */

@@ -126,6 +126,10 @@ docker compose --profile tools down -v  # tout arrêter et réinitialiser la bas
 Rechargement du backend : DevTools redémarre l'application quand les classes de
 `backend/target/classes` changent. Il suffit de recompiler depuis l'IDE (IntelliJ : *Build > Build Project*, Ctrl+F9).
 
+⚠️ **Après une modification du `pom.xml`** (nouvelle dépendance), DevTools ne suffit pas, car il garde l'ancien classpath.
+On voit alors une erreur du type `required a bean of type … that could not be found`. Il faut redémarrer le conteneur :
+`docker compose restart backend`.
+
 Les valeurs par défaut (ports, identifiants) se surchargent en copiant `.env.example` en `.env`.
 
 ### Option 2 — base dans Docker, back et front depuis l'IDE
