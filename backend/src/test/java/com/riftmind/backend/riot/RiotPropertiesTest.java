@@ -26,6 +26,8 @@ class RiotPropertiesTest {
             assertThat(props.rateLimit().shortWindow()).isEqualTo(new Window(20, Duration.ofSeconds(1)));
             assertThat(props.rateLimit().longWindow()).isEqualTo(new Window(100, Duration.ofMinutes(2)));
             assertThat(props.refreshCooldown()).isEqualTo(Duration.ofMinutes(2));
+            assertThat(props.connectTimeout()).isEqualTo(Duration.ofSeconds(5));
+            assertThat(props.readTimeout()).isEqualTo(Duration.ofSeconds(10));
         });
     }
 
@@ -67,7 +69,8 @@ class RiotPropertiesTest {
 
     @Test
     void neJamaisAfficherLaCleEnClair() {
-        RiotProperties props = new RiotProperties(FAKE_KEY, new RiotProperties.RateLimit(null, null), Duration.ofMinutes(2));
+        RiotProperties props = new RiotProperties(FAKE_KEY, new RiotProperties.RateLimit(null, null),
+                Duration.ofMinutes(2), Duration.ofSeconds(5), Duration.ofSeconds(10));
 
         assertThat(props.toString()).doesNotContain(FAKE_KEY).contains("RGAPI-****(42 caractères)");
         assertThat(props.maskedApiKey()).doesNotContain("0000");
