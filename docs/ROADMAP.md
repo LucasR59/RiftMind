@@ -11,11 +11,12 @@ et **ses winrates par champion**.
 
 - **Le front n'appelle jamais l'API Riot.** Seul le back l'appelle. La clé `RIOT_API_KEY` est une variable d'environnement : `.env` racine (déjà ignoré par git), transmise au conteneur backend par `compose.yaml`.
 - **Les matchs ne changent jamais une fois terminés.** On les stocke une seule fois en base et on ne récupère que les nouveaux. Les données d'un joueur (niveau, rang) sont rafraîchies à la demande (bouton « Mettre à jour », avec un délai minimum entre deux mises à jour).
-- **Limites de l'API Riot.** Avec une clé de dev : 20 requêtes/s et 100 requêtes/2 min **par région**, et la clé expire toutes les 24 h. Il faut un limiteur de requêtes côté back et gérer les erreurs 429 (en-tête `Retry-After`).
+- **Règles de l'API Riot : voir [riot-api.md](riot-api.md)** (clés, limites, routage vérifié, interdits).
+- **Limites de l'API Riot.** Avec une clé de dev : 20 requêtes/s et 100 requêtes/2 min **par hôte** (plateforme ou région), et la clé expire toutes les 24 h. Il faut un limiteur de requêtes côté back et gérer les erreurs 429 (en-tête `Retry-After`). Un site public exige une **clé de production**.
 - **Routage Riot.** Chaque *plateforme* (euw1, na1, kr…) est rattachée à une *région de routage* (europe, americas, asia, sea) :
-  - les appels Account-V1 et Match-V5 passent par la région de routage ;
+  - les appels Account-V1 et Match-V5 passent par la région de routage (Account-V1 jamais par `sea`) ;
   - les appels Summoner-V4 et League-V4 passent par la plateforme ;
-  - la liste exacte des correspondances est à vérifier sur developer.riotgames.com au moment de coder.
+  - la correspondance des 15 plateformes a été vérifiée en direct : voir [riot-api.md §3](riot-api.md#3-routage--plateformes-et-régions--vérifié).
 - **Données statiques via Data Dragon** (champions, objets, sorts, runes, icônes), en locale `fr_FR`. Les noms de files de jeu viennent de `queues.json`.
 - **Réutiliser l'existant** :
   - côté back : `GlobalExceptionHandler` + `ProblemDetail` (`backend/.../exception/`), le découpage en packages déjà en place, `TestcontainersConfiguration` pour les tests de repository ;
@@ -26,14 +27,14 @@ et **ses winrates par champion**.
 - [x] **0.1** Créer un compte sur developer.riotgames.com et récupérer une clé de dev. ✅ Fini quand : un appel Account-V1 de test répond avec curl.
 - [x] **0.2** Ajouter `RIOT_API_KEY` dans `.env.example`, dans `compose.yaml` (service backend) et dans le README (comment renouveler la clé tous les jours). ✅ Fini quand : la variable est visible dans le conteneur backend.
 - [x] **0.3** Ajouter dans `AppFooter.vue` la mention légale exigée par Riot (« RiftMind isn't endorsed by Riot Games… »). ✅ Fini quand : la mention s'affiche.
-- [ ] **0.4** Lire les règles d'utilisation de l'API (policies, limites de requêtes, démarche pour obtenir une clé de production) et noter les points importants dans `docs/`.
+- [x] **0.4** Lire les règles d'utilisation de l'API (policies, limites de requêtes, démarche pour obtenir une clé de production) et noter les points importants dans `docs/`. → [riot-api.md](riot-api.md)
 
 ## Phase 1 — Back : client de l'API Riot
-- [ ] **1.1** Créer l'enum `Platform` (code, nom affiché, région de routage) pour toutes les plateformes, dans `config/` ou dans un nouveau package `riot/`. ✅ Fini quand : un test unitaire vérifie chaque correspondance.
+- [ ] **1.1** Créer l'enum `Platform` (code, nom affiché, région de routage) pour les **15 plateformes** de [riot-api.md §3](riot-api.md#3-routage--plateformes-et-régions--vérifié) (sans `ph2` ni `th2`), dans `config/` ou dans un nouveau package `riot/`. ✅ Fini quand : un test unitaire vérifie chaque correspondance.
 - [ ] **1.2** Créer `RiotProperties` (`@ConfigurationProperties("riot")`) : clé, limites de requêtes, délai minimum entre deux mises à jour. Les tests utilisent une fausse clé. ✅ Fini quand : l'application démarre et la clé est lue depuis l'environnement.
 - [ ] **1.3** Créer `RiotClient` basé sur `RestClient` : en-tête `X-Riot-Token`, URL de base selon la plateforme ou la région de routage. Activer les virtual threads (`spring.threads.virtual.enabled=true`). ✅ Fini quand : un test `MockRestServiceServer` vérifie l'URL et l'en-tête.
 - [ ] **1.4** Transformer les erreurs Riot en exceptions métier : 404 → `PlayerNotFoundException`, 429 → `RiotRateLimitException` (avec `Retry-After`), 401/403 → `RiotApiKeyException` (log clair « clé expirée »), 5xx → `RiotUnavailableException`. Les brancher dans `GlobalExceptionHandler`. ✅ Fini quand : un test par cas.
-- [ ] **1.5** Ajouter un limiteur de requêtes par région de routage avec Bucket4j (20/s et 100/2 min, configurables). ✅ Fini quand : un test montre que la 21ᵉ requête dans la même seconde attend.
+- [ ] **1.5** Ajouter un limiteur de requêtes **par hôte** (plateforme ou région) avec Bucket4j (20/s et 100/2 min, configurables). Sur un 429, bloquer tous les appels vers cet hôte pendant `Retry-After`. Logguer les en-têtes `X-*-Rate-Limit-Count`. ✅ Fini quand : un test montre que la 21ᵉ requête dans la même seconde attend.
 - [ ] **1.6** Rassembler des réponses Riot réelles anonymisées dans `src/test/resources/riot/` (account, summoner, league, match ids, match). ✅ Fini quand : les fichiers servent aux tests suivants.
 
 ## Phase 2 — Back : recherche d'un joueur
@@ -67,6 +68,7 @@ et **ses winrates par champion**.
 
   ✅ Fini quand : un second appel ne déclenche aucune nouvelle requête vers Riot (vérifié par test).
 - [ ] **4.5** Détecter les remakes (`gameEndedInEarlySurrender`) et les exclure des stats.
+- [ ] **4.6** Règles Riot : ne pas afficher les **parties personnalisées** (`queueId` 0) dans l'historique ni dans les stats, et n'afficher **aucune stat d'Augments Arena**. ✅ Fini quand : un test vérifie qu'une partie personnalisée est ignorée.
 
 ## Phase 5 — Back : API historique, stats et mise à jour
 - [ ] **5.1** `GET /api/players/{puuid}/matches?page&size&queue` : historique paginé depuis la base. Chaque match contient le résumé du joueur et la liste compacte des 10 participants.
@@ -75,7 +77,8 @@ et **ses winrates par champion**.
 - [ ] **5.4** `GET /api/players/{puuid}/summary` : résumé des 20 dernières games (winrate, KDA, répartition des rôles).
 - [ ] **5.5** `POST /api/players/{puuid}/refresh` : met à jour le joueur, ses rangs et ses nouveaux matchs. Délai minimum entre deux mises à jour (2 min) basé sur `last_refreshed_at`, sinon réponse 429 avec le temps restant.
 - [ ] **5.6** Première recherche d'un joueur : lancer automatiquement la récupération de ses 20 derniers matchs.
-- [ ] **5.7** ⚠️ **Demander la clé API « Personal » ou « Production » dès cette étape.** Il faut avoir enregistré le produit et avoir un prototype fonctionnel, et la validation par Riot prend du temps.
+- [ ] **5.7** ⚠️ **Demander la clé API de production dès cette étape** (une clé personnelle n'autorise pas un site public). Il faut un prototype fonctionnel et expliquer en quoi le site aide les joueurs. Riot n'annonce aucun délai de validation. Voir [riot-api.md §1](riot-api.md#obtenir-la-clé-de-production-tâche-57).
+- [ ] **5.8** Suppression des données d'un joueur (RGPD) : supprimer le joueur, ses rangs et ses participations à partir de son PUUID, pour traiter les demandes que Riot transmet. ✅ Fini quand : un test vérifie qu'il ne reste plus rien en base pour ce PUUID.
 
 ## Phase 6 — Front : fondations
 - [ ] **6.1** Types TS miroirs des DTO dans `src/types/` (Player, LeagueEntry, MatchSummary, ChampionStats…).
