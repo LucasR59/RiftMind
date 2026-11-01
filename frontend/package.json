@@ -13,7 +13,10 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/ tests/"
+    "format": "prettier --write --experimental-cli src/ tests/",
+    "test:ci": "vitest run",
+    "check:lint": "oxlint . && eslint .",
+    "check:format": "prettier --check --experimental-cli src/ tests/"
   },
   "dependencies": {
     "pinia": "^4.0.3",

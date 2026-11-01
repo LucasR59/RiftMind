@@ -119,3 +119,13 @@ npm run type-check
 npm run lint
 npm run format
 ```
+
+## Intégration continue (GitHub Actions)
+
+| Workflow                                   | Déclenché par                          | Vérifie                                                   |
+|--------------------------------------------|----------------------------------------|-----------------------------------------------------------|
+| `.github/workflows/backend.yml`            | changements dans `backend/`            | `./mvnw verify` (build + tests avec Testcontainers)       |
+| `.github/workflows/frontend.yml`           | changements dans `frontend/`           | format, lint, type-check, tests Vitest, build             |
+| `.github/workflows/smoke.yml`              | chaque push sur `main` et chaque PR    | démarre `compose.yaml` et teste front → back → base       |
+
+Mêmes vérifications en local côté front : `npm run check:format`, `npm run check:lint`, `npm run test:ci`.

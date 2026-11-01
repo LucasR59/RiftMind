@@ -1,0 +1,66 @@
+# Démarre toute la stack docker compose et vérifie que front -> back -> base répondent.
+name: Smoke test (docker compose)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Stack complète
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Valider compose.yaml
+        run: docker compose config -q
+
+      - name: Démarrer la stack
+        run: docker compose up -d --build --wait postgres && docker compose up -d --build backend frontend
+
+      - name: Attendre le backend (healthcheck Actuator)
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "Backend UP après ~$((i * 5))s"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Le backend n'a pas démarré à temps"; exit 1
+
+      - name: Vérifier front -> proxy -> back
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5173/api/ping | grep -q '"status":"ok"'; then
+              curl -s http://localhost:5173/api/ping; echo; exit 0
+            fi
+            sleep 2
+          done
+          echo "Le frontend ne relaie pas /api/ping"; exit 1
+
+      - name: Vérifier la page d'accueil
+        run: curl -sf http://localhost:5173/ | grep -q '<div id="app">'
+
+      - name: Vérifier les migrations Flyway
+        run: |
+          docker compose exec -T postgres \
+            psql -U riftmind -d riftmind -tAc "select count(*) from flyway_schema_history where success" \
+            | grep -qv '^0$'
+
+      - name: Logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Arrêter la stack
+        if: always()
+        run: docker compose down -v
