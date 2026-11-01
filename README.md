@@ -33,6 +33,7 @@ RiftMind/
 │       │   │   ├── exception/           # Exceptions métier + handler global (ProblemDetail)
 │       │   │   ├── model/               # Entités JPA / objets du domaine
 │       │   │   ├── repository/          # Repositories Spring Data
+│       │   │   ├── riot/                # Client de l'API Riot (limiteur, erreurs) ; riot/dto/ = réponses Riot
 │       │   │   └── service/             # Logique métier
 │       │   └── resources/
 │       │       ├── db/migration/                # Migrations Flyway (V1__init.sql, V2__...)

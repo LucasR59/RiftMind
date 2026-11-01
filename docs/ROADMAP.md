@@ -38,7 +38,7 @@ et **ses winrates par champion**.
 - [x] **1.6** Rassembler des réponses Riot réelles anonymisées dans `src/test/resources/riot/` (account, summoner, league, match ids, match). ✅ Fini quand : les fichiers servent aux tests suivants. → `node scripts/riot-fixtures.mjs` les régénère. Accès en Java avec `RiotFixtures`. Voir le README du dossier.
 
 ## Phase 2 — Back : recherche d'un joueur
-- [ ] **2.1** Créer les DTO Riot `AccountDto` et `SummonerDto` (records, uniquement les champs utiles).
+- [x] **2.1** Créer les DTO Riot `AccountDto` et `SummonerDto` (records, uniquement les champs utiles). → package `riot/dto/` (le package `dto/` est réservé aux objets envoyés au front).
 - [ ] **2.2** Migration `V2__player.sql` : table `player`.
   - Colonnes : `puuid` (clé primaire), `game_name`, `tag_line`, `platform`, `summoner_level`, `profile_icon_id`, `last_refreshed_at`, `created_at`.
   - Index sur `lower(game_name)`, `lower(tag_line)`, `platform`.
