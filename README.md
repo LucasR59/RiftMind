@@ -1,5 +1,9 @@
 # RiftMind
 
+Site de stats League of Legends : recherche de joueurs, rang, historique de games et winrate par champion.
+
+📋 **Roadmap et tâches de développement : [docs/ROADMAP.md](docs/ROADMAP.md)**
+
 Monorepo contenant :
 
 | Dossier     | Stack                                                | Port dev |

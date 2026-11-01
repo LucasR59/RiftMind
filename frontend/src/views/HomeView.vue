@@ -11,7 +11,7 @@ import logoUrl from '@/assets/logo.svg'
 
     <h1 class="hero__title">RiftMind</h1>
 
-    <p class="hero__tagline">Bienvenue sur RiftMind. Le projet démarre ici.</p>
+    <p class="hero__tagline">Bienvenue sur RiftMind.</p>
 
     <BackendStatus />
   </section>
