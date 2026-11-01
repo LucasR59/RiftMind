@@ -39,9 +39,10 @@ et **ses winrates par champion**.
 
 ## Phase 2 — Back : recherche d'un joueur
 - [x] **2.1** Créer les DTO Riot `AccountDto` et `SummonerDto` (records, uniquement les champs utiles). → package `riot/dto/` (le package `dto/` est réservé aux objets envoyés au front).
-- [ ] **2.2** Migration `V2__player.sql` : table `player`.
+- [x] **2.2** Migration `V2__player.sql` : table `player`.
   - Colonnes : `puuid` (clé primaire), `game_name`, `tag_line`, `platform`, `summoner_level`, `profile_icon_id`, `last_refreshed_at`, `created_at`.
   - Index sur `lower(game_name)`, `lower(tag_line)`, `platform`.
+  - → Un seul index composé `(platform, lower(game_name), lower(tag_line))`, non unique : un Riot ID libéré puis repris peut rester sur deux lignes jusqu'au rafraîchissement. `platform` = nom de l'enum (`EUW1`), limité aux 15 plateformes par une contrainte.
 - [ ] **2.3** Créer l'entité `Player` (`model/`) et `PlayerRepository` (`repository/`). ✅ Fini quand : un test de repository passe avec Testcontainers.
 - [ ] **2.4** Créer `PlayerService.getOrFetch(platform, gameName, tagLine)` : renvoie le joueur depuis la base s'il y est, sinon appelle Account-V1 puis Summoner-V4 et l'enregistre. ✅ Fini quand : les tests du service passent avec un `RiotClient` mocké.
 - [ ] **2.5** Exposer `GET /api/players/{platform}/{gameName}/{tagLine}` → `PlayerResponse` (404 en `ProblemDetail` si le joueur n'existe pas). ✅ Fini quand : test `@WebMvcTest` + un appel curl réel sur EUW.
