@@ -118,6 +118,7 @@ Méthode de vérification : pour chaque plateforme, un joueur Challenger a été
 ### Riot ID et PUUID
 - Les noms d'invocateur sont remplacés par le **Riot ID** (`gameName#tagLine`) depuis novembre 2023. Les endpoints `by-name` sont dépréciés.
 - Pour chercher un joueur : Riot ID → **PUUID** (Account-V1) → infos de jeu (Summoner-V4, League-V4, Match-V5 par PUUID).
+- Le compte Riot (Account-V1) est mondial, mais le profil LoL est propre à chaque plateforme. Un compte sans profil sur la plateforme demandée fait répondre **404** à Summoner-V4 (✔ vérifié : un Challenger EUW cherché sur KR). `PlayerService` le traduit en « pas de profil League of Legends sur KR, essayez une autre région ».
 - **Le PUUID sert d'identifiant stable** (clé primaire en base). Le Riot ID peut changer, il faut donc le mettre à jour lors des rafraîchissements.
 - Le site doit afficher le Riot ID, pas l'ancien nom d'invocateur.
 
