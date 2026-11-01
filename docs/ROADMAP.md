@@ -43,7 +43,7 @@ et **ses winrates par champion**.
   - Colonnes : `puuid` (clé primaire), `game_name`, `tag_line`, `platform`, `summoner_level`, `profile_icon_id`, `last_refreshed_at`, `created_at`.
   - Index sur `lower(game_name)`, `lower(tag_line)`, `platform`.
   - → Un seul index composé `(platform, lower(game_name), lower(tag_line))`, non unique : un Riot ID libéré puis repris peut rester sur deux lignes jusqu'au rafraîchissement. `platform` = nom de l'enum (`EUW1`), limité aux 15 plateformes par une contrainte.
-- [ ] **2.3** Créer l'entité `Player` (`model/`) et `PlayerRepository` (`repository/`). ✅ Fini quand : un test de repository passe avec Testcontainers.
+- [x] **2.3** Créer l'entité `Player` (`model/`) et `PlayerRepository` (`repository/`). ✅ Fini quand : un test de repository passe avec Testcontainers. → Recherche avec `findByRiotId(platform, gameName, tagLine)` : insensible à la casse, et le plus récemment rafraîchi gagne. Mise à jour avec `Player.refresh(...)`.
 - [ ] **2.4** Créer `PlayerService.getOrFetch(platform, gameName, tagLine)` : renvoie le joueur depuis la base s'il y est, sinon appelle Account-V1 puis Summoner-V4 et l'enregistre. ✅ Fini quand : les tests du service passent avec un `RiotClient` mocké.
 - [ ] **2.5** Exposer `GET /api/players/{platform}/{gameName}/{tagLine}` → `PlayerResponse` (404 en `ProblemDetail` si le joueur n'existe pas). ✅ Fini quand : test `@WebMvcTest` + un appel curl réel sur EUW.
 
