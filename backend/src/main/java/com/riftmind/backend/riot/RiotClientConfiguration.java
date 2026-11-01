@@ -16,8 +16,14 @@ class RiotClientConfiguration {
      *                conversion JSON et les métriques {@code http.client.requests}
      */
     @Bean
-    RiotClient riotClient(RestClient.Builder builder, RiotProperties properties) {
-        return new RiotClient(builder.requestFactory(requestFactory(properties)), properties);
+    RiotClient riotClient(RestClient.Builder builder, RiotProperties properties, RiotRateLimiter rateLimiter) {
+        return new RiotClient(builder.requestFactory(requestFactory(properties)), properties, rateLimiter);
+    }
+
+    /** Un seul limiteur pour toute l'application : les quotas Riot sont liés à la clé. */
+    @Bean
+    RiotRateLimiter riotRateLimiter(RiotProperties properties) {
+        return new RiotRateLimiter(properties.rateLimit());
     }
 
     /** Client HTTP du JDK avec les délais de {@code riot.connect-timeout} et {@code riot.read-timeout}. */

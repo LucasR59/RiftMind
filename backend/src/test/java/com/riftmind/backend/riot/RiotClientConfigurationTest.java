@@ -50,7 +50,7 @@ class RiotClientConfigurationTest {
 
     @Test
     void abandonneUnAppelTropLent() {
-        RiotProperties properties = new RiotProperties("RGAPI-test", new RiotProperties.RateLimit(null, null),
+        RiotProperties properties = new RiotProperties("RGAPI-test", RiotProperties.RateLimit.defaults(),
                 Duration.ofMinutes(2), Duration.ofSeconds(1), Duration.ofMillis(300));
         RestClient restClient = RestClient.builder()
                 .requestFactory(RiotClientConfiguration.requestFactory(properties))
