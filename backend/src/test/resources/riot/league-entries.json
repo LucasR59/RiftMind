@@ -1,0 +1,15 @@
+[
+  {
+    "queueType": "RANKED_SOLO_5x5",
+    "tier": "CHALLENGER",
+    "rank": "I",
+    "puuid": "RiftMindTestPuuid01_0000000000000000000000000000000000000000000000000000000000",
+    "leaguePoints": 1234,
+    "wins": 250,
+    "losses": 200,
+    "veteran": true,
+    "inactive": false,
+    "freshBlood": false,
+    "hotStreak": false
+  }
+]
