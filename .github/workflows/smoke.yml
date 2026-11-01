@@ -19,6 +19,9 @@ jobs:
     name: Stack complète
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Le backend refuse de démarrer sans clé : on fournit une fausse clé (aucun appel réel à Riot ici)
+      RIOT_API_KEY: RGAPI-ci-placeholder-not-a-real-key
     steps:
       - uses: actions/checkout@v7
 

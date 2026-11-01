@@ -99,6 +99,12 @@ docker compose exec backend sh -c 'curl -s -o /dev/null -w "%{http_code}\n" -H "
 Si le backend est lancé depuis IntelliJ (option 2), ajouter `RIOT_API_KEY` dans les *Environment variables*
 de la configuration de lancement.
 
+**Le backend refuse de démarrer sans clé** (`APPLICATION FAILED TO START … RIOT_API_KEY`).
+Au démarrage, il affiche la configuration utilisée, avec la clé masquée :
+`API Riot configurée : clé RGAPI-****(42 caractères), limites …`.
+Les limites de requêtes et le délai entre deux mises à jour se règlent dans `application.properties` (préfixe `riot.`).
+Les tests utilisent une fausse clé (`src/test/resources/config/application.properties`) et n'appellent jamais Riot.
+
 ### Option 1 — tout dans Docker
 
 ```bash
