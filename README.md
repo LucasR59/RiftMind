@@ -18,6 +18,7 @@ Monorepo contenant :
 RiftMind/
 ├── compose.yaml                         # Stack de dev : postgres, backend, frontend, adminer
 ├── .env.example                         # Variables de compose.yaml (copier en .env)
+├── scripts/riot-fixtures.mjs            # Régénère les réponses Riot de test (backend/src/test/resources/riot/)
 ├── backend/
 │   ├── Dockerfile.dev                   # Image de dev (code monté en volume, debug sur 5005)
 │   ├── mvnw / mvnw.cmd                  # Maven Wrapper (pas besoin d'installer Maven)
@@ -38,11 +39,13 @@ RiftMind/
 │       │       ├── application.properties       # Config commune
 │       │       ├── application-dev.properties   # Profil dev (par défaut)
 │       │       └── application-local.properties # Surcharges perso (non versionné)
-│       └── test/java/com/riftmind/backend/      # Même découpage que main/
-│           ├── RiftMindApplicationTests.java    # Chargement du contexte (avec PostgreSQL Testcontainers)
-│           ├── TestcontainersConfiguration.java # PostgreSQL éphémère pour les tests
-│           ├── TestRiftMindApplication.java     # Lance l'app avec une BDD Testcontainers
-│           └── controller/                      # Tests @WebMvcTest
+│       ├── test/java/com/riftmind/backend/      # Même découpage que main/
+│       │   ├── RiftMindApplicationTests.java    # Chargement du contexte (avec PostgreSQL Testcontainers)
+│       │   ├── TestcontainersConfiguration.java # PostgreSQL éphémère pour les tests
+│       │   ├── TestRiftMindApplication.java     # Lance l'app avec une BDD Testcontainers
+│       │   ├── controller/                      # Tests @WebMvcTest
+│       │   └── riot/                            # Client Riot ; RiotFixtures lit les réponses de test
+│       └── test/resources/riot/                 # Vraies réponses Riot anonymisées (voir son README)
 └── frontend/
     ├── Dockerfile.dev                   # Image de dev (Vite avec hot reload)
     ├── .env.example                     # Variables Vite (copier en .env.local)
@@ -107,6 +110,7 @@ Le backend respecte lui-même les limites Riot, hôte par hôte. Au besoin, un a
 En profil `dev`, chaque appel à Riot est logué avec les compteurs de quota renvoyés par Riot.
 Détails : [docs/riot-api.md](docs/riot-api.md#comment-riftmind-respecte-les-limites-tâche-15).
 Les tests utilisent une fausse clé (`src/test/resources/config/application.properties`) et n'appellent jamais Riot.
+Ils utilisent de vraies réponses Riot anonymisées (`src/test/resources/riot/`, régénérées par `node scripts/riot-fixtures.mjs`).
 
 ### Option 1 — tout dans Docker
 
