@@ -46,19 +46,21 @@ RiftMind/
     ├── vitest.config.ts
     ├── src/
     │   ├── api/                         # Client HTTP (http.ts) + un fichier par ressource
-    │   ├── assets/                      # CSS, images
-    │   ├── components/                  # Composants réutilisables
+    │   ├── assets/                      # main.css (design tokens, thème sombre), logo.svg
+    │   ├── components/                  # Composants réutilisables (BackendStatus...)
+    │   │   └── layout/                  # AppHeader, AppFooter
     │   ├── composables/                 # Logique réactive réutilisable (useXxx)
-    │   ├── router/                      # Routes Vue Router
+    │   ├── router/                      # Routes Vue Router (+ page 404 attrape-tout)
     │   ├── stores/                      # Stores Pinia
     │   ├── types/                       # Types TS partagés (miroir des DTO Java)
-    │   ├── views/                       # Pages associées aux routes
-    │   ├── App.vue
+    │   ├── views/                       # Pages : HomeView, NotFoundView
+    │   ├── App.vue                      # Layout global : header + page + footer
     │   └── main.ts
     └── tests/
         └── unit/                        # Tests Vitest, même découpage que src/
             ├── api/
-            └── components/
+            ├── components/
+            └── views/
 ```
 
 ## Lancer en développement
