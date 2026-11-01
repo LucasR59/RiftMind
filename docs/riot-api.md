@@ -54,8 +54,11 @@
 | Code | Signification |
 |---|---|
 | 400 | Requête mal formée |
-| 401 | Aucune clé envoyée |
+| 401 | Clé absente ou inconnue (✔ vérifié : une fausse clé `RGAPI-…` renvoie 401) |
 | 403 | Clé invalide, **expirée** ou **blacklistée**, ou mauvais chemin d'URL |
+
+Le format d'un 404 a été vérifié : `{"status":{"status_code":404,"message":"Data not found - No results found for player with riot id …"}}`.
+La conversion de ces codes en exceptions et en réponses de l'API RiftMind est décrite dans le [README](../README.md#erreurs-renvoyées-par-lapi-riftmind).
 | 404 | Ressource introuvable (joueur, match…) |
 | 429 | Limite dépassée → respecter `Retry-After` |
 | 500 / 503 | Erreur côté Riot → réessayer plus tard |

@@ -146,6 +146,25 @@ avec une base PostgreSQL éphémère via Testcontainers.
 
 Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur le backend.
 
+## Erreurs renvoyées par l'API RiftMind
+
+Les erreurs suivent le format standard [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`application/problem+json`).
+La propriété **`code`** est stable : c'est elle que le front doit tester.
+
+```json
+{ "status": 503, "title": "Trop de requêtes vers Riot", "detail": "… Réessayez dans 7 s.", "code": "RIOT_RATE_LIMITED", "retryAfterSeconds": 7 }
+```
+
+| Cas | HTTP | `code` | Détail |
+|---|---|---|---|
+| Ressource introuvable (Riot 404) | 404 | `NOT_FOUND` | |
+| Limite de requêtes Riot atteinte (Riot 429) | 503 | `RIOT_RATE_LIMITED` | En-tête `Retry-After` + `retryAfterSeconds` |
+| Riot en panne, timeout, réseau (Riot 5xx) | 503 | `RIOT_UNAVAILABLE` | |
+| Clé API refusée (Riot 401/403) | 503 | `RIOT_UNAVAILABLE` | Message neutre pour le public. La cause (`Clé API Riot refusée…`) est dans les logs en ERROR |
+| Réponse Riot inattendue (400, 415…) | 502 | `RIOT_ERROR` | Bug probable dans notre appel, logué en ERROR |
+
+Code : exceptions dans `backend/.../riot/Riot*Exception.java`, conversion dans `exception/GlobalExceptionHandler.java`.
+
 ## Base de données
 
 Le schéma est géré **uniquement** par Flyway (`spring.jpa.hibernate.ddl-auto=validate`) :
