@@ -39,6 +39,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-riftmind}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-riftmind}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-riftmind}
+      # Clé API Riot lue depuis .env (vide par défaut pour que la CI démarre sans clé)
+      RIOT_API_KEY: ${RIOT_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
       - "${BACKEND_DEBUG_PORT:-5005}:5005" # debug distant (JDWP) depuis l'IDE

@@ -2,6 +2,11 @@
 # Les classes recompilées par l'IDE dans target/ déclenchent un redémarrage via DevTools.
 FROM eclipse-temurin:25-jdk
 
+# curl : pour tester l'API Riot et les endpoints depuis le conteneur
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 EXPOSE 8080 5005

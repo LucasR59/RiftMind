@@ -23,8 +23,8 @@ et **ses winrates par champion**.
 - **Une tâche = une branche = une PR avec CI verte.** Chaque tâche ci-dessous indique quand elle est terminée (« ✅ Fini quand »).
 
 ## Phase 0 — Préparation
-- [ ] **0.1** Créer un compte sur developer.riotgames.com et récupérer une clé de dev. ✅ Fini quand : un appel Account-V1 de test répond avec curl.
-- [ ] **0.2** Ajouter `RIOT_API_KEY` dans `.env.example`, dans `compose.yaml` (service backend) et dans le README (comment renouveler la clé tous les jours). ✅ Fini quand : la variable est visible dans le conteneur backend.
+- [x] **0.1** Créer un compte sur developer.riotgames.com et récupérer une clé de dev. ✅ Fini quand : un appel Account-V1 de test répond avec curl.
+- [x] **0.2** Ajouter `RIOT_API_KEY` dans `.env.example`, dans `compose.yaml` (service backend) et dans le README (comment renouveler la clé tous les jours). ✅ Fini quand : la variable est visible dans le conteneur backend.
 - [ ] **0.3** Ajouter dans `AppFooter.vue` la mention légale exigée par Riot (« RiftMind isn't endorsed by Riot Games… »). ✅ Fini quand : la mention s'affiche.
 - [ ] **0.4** Lire les règles d'utilisation de l'API (policies, limites de requêtes, démarche pour obtenir une clé de production) et noter les points importants dans `docs/`.
 
