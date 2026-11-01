@@ -1,21 +1,20 @@
 package com.riftmind.backend.controller;
 
 import java.time.Instant;
-import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.riftmind.backend.dto.PingResponse;
+
+/** Endpoint de test utilisé par le frontend pour vérifier que l'API répond. */
 @RestController
 @RequestMapping("/api")
-public class HealthController {
+public class PingController {
 
     @GetMapping("/ping")
-    public Map<String, Object> ping() {
-        return Map.of(
-                "status", "ok",
-                "service", "riftmind-backend",
-                "timestamp", Instant.now().toString());
+    public PingResponse ping() {
+        return new PingResponse("ok", "riftmind-backend", Instant.now());
     }
 }

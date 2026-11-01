@@ -1,29 +1,34 @@
-# Compiled class file
-*.class
+# =============================================================
+# RiftMind - règles communes au monorepo
+# (les règles spécifiques sont dans backend/.gitignore et frontend/.gitignore)
+# =============================================================
 
-# Log file
-*.log
+# --- Systèmes d'exploitation ---
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-
-# IDE
+# --- IDE / éditeurs ---
 .idea/
 *.iml
-.vscode/
+*.iws
+*.ipr
+out/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.sw?
+*~
+
+# --- Variables d'environnement / secrets ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Logs ---
+*.log
+logs/
