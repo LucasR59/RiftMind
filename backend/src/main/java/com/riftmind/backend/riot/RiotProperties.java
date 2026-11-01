@@ -21,6 +21,8 @@ import jakarta.validation.constraints.Positive;
  * riot.rate-limit.long-window.requests=30000
  * riot.rate-limit.long-window.period=10m
  * </pre>
+ * Ces limites sont celles de l'application. Les limites par méthode (par endpoint) ne sont pas appliquées en amont.
+ * Si l'une d'elles est dépassée, le 429 de Riot bloque l'hôte pendant {@code Retry-After}.
  *
  * @param apiKey          clé API Riot, lue depuis la variable d'environnement {@code RIOT_API_KEY}
  * @param rateLimit       limites de requêtes appliquées à chaque hôte Riot (plateforme ou région)
@@ -39,17 +41,34 @@ public record RiotProperties(
         @NotNull @DefaultValue("10s") Duration readTimeout) {
 
     /**
-     * Limites de requêtes, appliquées séparément à chaque hôte Riot.
+     * Limites de requêtes, appliquées séparément à chaque hôte Riot (voir {@link RiotRateLimiter}).
      * Par défaut, celles d'une clé de développement : 20 requêtes/1 s et 100 requêtes/2 min.
+     *
+     * @param shortWindow fenêtre courte (20 req/1 s par défaut)
+     * @param longWindow  fenêtre longue (100 req/2 min par défaut)
+     * @param maxWait     attente maximale avant un appel. Au-delà, l'appel échoue tout de suite avec
+     *                    {@link RiotRateLimitException} au lieu de faire patienter l'utilisateur (5 s par défaut)
      */
-    public record RateLimit(@Valid Window shortWindow, @Valid Window longWindow) {
+    public record RateLimit(@Valid Window shortWindow, @Valid Window longWindow, Duration maxWait) {
 
         public static final Window DEFAULT_SHORT_WINDOW = new Window(20, Duration.ofSeconds(1));
         public static final Window DEFAULT_LONG_WINDOW = new Window(100, Duration.ofMinutes(2));
+        public static final Duration DEFAULT_MAX_WAIT = Duration.ofSeconds(5);
 
         public RateLimit {
             shortWindow = shortWindow != null ? shortWindow : DEFAULT_SHORT_WINDOW;
             longWindow = longWindow != null ? longWindow : DEFAULT_LONG_WINDOW;
+            maxWait = maxWait != null ? maxWait : DEFAULT_MAX_WAIT;
+        }
+
+        /** Limites par défaut, celles d'une clé de développement. */
+        public static RateLimit defaults() {
+            return new RateLimit(null, null, null);
+        }
+
+        @Override
+        public String toString() {
+            return shortWindow + " et " + longWindow + " par hôte (attente max " + Window.format(maxWait) + ")";
         }
     }
 
@@ -60,8 +79,12 @@ public record RiotProperties(
 
         @Override
         public String toString() {
-            // PT2M -> 2m, PT1S -> 1s
-            return requests + " req/" + (period == null ? "?" : period.toString().substring(2).toLowerCase());
+            return requests + " req/" + format(period);
+        }
+
+        /** PT2M -> 2m, PT1S -> 1s, PT0.2S -> 0.2s. */
+        static String format(Duration duration) {
+            return duration == null ? "?" : duration.toString().substring(2).toLowerCase();
         }
     }
 

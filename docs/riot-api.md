@@ -56,14 +56,29 @@
 | 400 | Requête mal formée |
 | 401 | Clé absente ou inconnue (✔ vérifié : une fausse clé `RGAPI-…` renvoie 401) |
 | 403 | Clé invalide, **expirée** ou **blacklistée**, ou mauvais chemin d'URL |
-
-Le format d'un 404 a été vérifié : `{"status":{"status_code":404,"message":"Data not found - No results found for player with riot id …"}}`.
-La conversion de ces codes en exceptions et en réponses de l'API RiftMind est décrite dans le [README](../README.md#erreurs-renvoyées-par-lapi-riftmind).
 | 404 | Ressource introuvable (joueur, match…) |
 | 429 | Limite dépassée → respecter `Retry-After` |
 | 500 / 503 | Erreur côté Riot → réessayer plus tard |
 
+Le format d'un 404 a été vérifié : `{"status":{"status_code":404,"message":"Data not found - No results found for player with riot id …"}}`.
+La conversion de ces codes en exceptions et en réponses de l'API RiftMind est décrite dans le [README](../README.md#erreurs-renvoyées-par-lapi-riftmind).
+
 Riot recommande de *« fail gracefully based on the response code alone »*.
+
+### Comment RiftMind respecte les limites (tâche 1.5)
+
+`RiotRateLimiter` applique les deux fenêtres (`riot.rate-limit.*`) **séparément pour chaque hôte** :
+- **Fenêtre glissante.** Une requête ne part que si la N-ième requête précédente s'est **terminée** depuis au moins une période.
+  - On compte depuis la fin et non depuis le départ, parce que Riot reçoit la requête avant qu'elle se termine.
+    ✔ Vérifié : 25 requêtes simultanées sur `euw1` démarrent la fenêtre de Riot environ 500 ms après leur départ, à cause de la connexion TLS.
+    En comptant depuis le départ, les 5 dernières recevaient un 429. En comptant depuis la fin, les 25 passent : 20 tout de suite, 5 une seconde plus tard.
+  - Un seau à jetons classique (Bucket4j) ne convient pas. Il garantit un débit moyen, mais peut laisser passer 2N requêtes à cheval sur deux fenêtres.
+- **Attente plafonnée.** Si le quota est épuisé, l'appel attend son tour.
+  Si l'attente dépasse `riot.rate-limit.max-wait` (5 s par défaut), il échoue tout de suite : `RIOT_RATE_LIMITED` avec `Retry-After`.
+- **429 reçu.** L'hôte est bloqué pendant `Retry-After` (1 s si l'en-tête est absent). Un WARN est logué avec le type de limite et les compteurs `X-App-Rate-Limit-Count` / `X-Method-Rate-Limit-Count`.
+- **Compteurs.** À chaque réponse, les compteurs sont logués en DEBUG (actif dans le profil `dev`), par exemple `app 13:1,35:120, méthode 12:10,34:600`.
+- **Pas de limite par méthode en amont.** Les limites par endpoint (en-tête `X-Method-Rate-Limit`) sont gérées seulement par le blocage après un 429.
+- **Un seul backend.** Le limiteur est en mémoire. Avec plusieurs instances du backend, il faudrait un quota partagé (Redis…).
 
 ## 3. Routage : plateformes et régions (✔ vérifié)
 

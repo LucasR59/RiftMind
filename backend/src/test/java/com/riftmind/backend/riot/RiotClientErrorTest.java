@@ -31,8 +31,9 @@ class RiotClientErrorTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new RiotClient(builder, new RiotProperties(FAKE_KEY, new RiotProperties.RateLimit(null, null),
-                Duration.ofMinutes(2), Duration.ofSeconds(5), Duration.ofSeconds(10)));
+        RiotProperties properties = new RiotProperties(FAKE_KEY, RiotProperties.RateLimit.defaults(),
+                Duration.ofMinutes(2), Duration.ofSeconds(5), Duration.ofSeconds(10));
+        client = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
     }
 
     private Object callSummoner() {

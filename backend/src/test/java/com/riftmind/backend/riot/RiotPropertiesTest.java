@@ -25,6 +25,7 @@ class RiotPropertiesTest {
             assertThat(props.apiKey()).isEqualTo(FAKE_KEY);
             assertThat(props.rateLimit().shortWindow()).isEqualTo(new Window(20, Duration.ofSeconds(1)));
             assertThat(props.rateLimit().longWindow()).isEqualTo(new Window(100, Duration.ofMinutes(2)));
+            assertThat(props.rateLimit().maxWait()).isEqualTo(Duration.ofSeconds(5));
             assertThat(props.refreshCooldown()).isEqualTo(Duration.ofMinutes(2));
             assertThat(props.connectTimeout()).isEqualTo(Duration.ofSeconds(5));
             assertThat(props.readTimeout()).isEqualTo(Duration.ofSeconds(10));
@@ -39,11 +40,13 @@ class RiotPropertiesTest {
                 "riot.rate-limit.short-window.period=10s",
                 "riot.rate-limit.long-window.requests=30000",
                 "riot.rate-limit.long-window.period=10m",
+                "riot.rate-limit.max-wait=10s",
                 "riot.refresh-cooldown=5m").run(context -> {
             RiotProperties props = context.getBean(RiotProperties.class);
 
             assertThat(props.rateLimit().shortWindow()).isEqualTo(new Window(500, Duration.ofSeconds(10)));
             assertThat(props.rateLimit().longWindow()).isEqualTo(new Window(30000, Duration.ofMinutes(10)));
+            assertThat(props.rateLimit().maxWait()).isEqualTo(Duration.ofSeconds(10));
             assertThat(props.refreshCooldown()).isEqualTo(Duration.ofMinutes(5));
         });
     }
@@ -69,7 +72,7 @@ class RiotPropertiesTest {
 
     @Test
     void neJamaisAfficherLaCleEnClair() {
-        RiotProperties props = new RiotProperties(FAKE_KEY, new RiotProperties.RateLimit(null, null),
+        RiotProperties props = new RiotProperties(FAKE_KEY, RiotProperties.RateLimit.defaults(),
                 Duration.ofMinutes(2), Duration.ofSeconds(5), Duration.ofSeconds(10));
 
         assertThat(props.toString()).doesNotContain(FAKE_KEY).contains("RGAPI-****(42 caractères)");

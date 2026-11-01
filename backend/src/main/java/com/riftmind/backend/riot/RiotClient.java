@@ -1,10 +1,13 @@
 package com.riftmind.backend.riot;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -28,25 +31,41 @@ import org.springframework.web.client.RestClient;
  *   <li>5xx, timeout, erreur réseau → {@link RiotUnavailableException}</li>
  *   <li>autre code → {@link RiotApiException}</li>
  * </ul>
- * Les limites de requêtes seront appliquées en amont par la tâche 1.5 (voir docs/ROADMAP.md).
+ *
+ * <p>Chaque appel passe d'abord par le {@link RiotRateLimiter} de son hôte : il attend son tour si le quota est
+ * épuisé. Si Riot répond quand même 429, l'hôte est bloqué pendant {@code Retry-After}.
+ * Les compteurs renvoyés par Riot ({@code X-App-Rate-Limit-Count}, {@code X-Method-Rate-Limit-Count}) sont logués
+ * en DEBUG à chaque réponse, et en WARN sur un 429.
  */
 public class RiotClient {
 
+    private static final Logger log = LoggerFactory.getLogger(RiotClient.class);
+
     static final String API_KEY_HEADER = "X-Riot-Token";
     static final String RATE_LIMIT_TYPE_HEADER = "X-Rate-Limit-Type";
+    static final String APP_RATE_LIMIT_COUNT_HEADER = "X-App-Rate-Limit-Count";
+    static final String METHOD_RATE_LIMIT_COUNT_HEADER = "X-Method-Rate-Limit-Count";
     private static final int MAX_ERROR_BODY_LENGTH = 300;
 
     private final RestClient restClient;
+    private final RiotRateLimiter rateLimiter;
 
     /**
-     * @param builder    builder fourni par Spring Boot (timeouts déjà configurés dans {@link RiotClientConfiguration}),
-     *                   ou relié à un {@code MockRestServiceServer} dans les tests
-     * @param properties configuration Riot (clé API)
+     * @param builder     builder fourni par Spring Boot (timeouts déjà configurés dans {@link RiotClientConfiguration}),
+     *                    ou relié à un {@code MockRestServiceServer} dans les tests
+     * @param properties  configuration Riot (clé API)
+     * @param rateLimiter limiteur de requêtes partagé par tous les appels
      */
-    public RiotClient(RestClient.Builder builder, RiotProperties properties) {
+    public RiotClient(RestClient.Builder builder, RiotProperties properties, RiotRateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
         this.restClient = builder
                 .defaultHeader(API_KEY_HEADER, properties.apiKey())
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .requestInterceptor((request, body, execution) -> {
+                    ClientHttpResponse response = execution.execute(request, body);
+                    onResponse(request.getURI(), response);
+                    return response;
+                })
                 .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
                     throw toException(request.getURI().getHost(), response);
                 })
@@ -80,7 +99,7 @@ public class RiotClient {
         if (pathTemplate == null || !pathTemplate.startsWith("/")) {
             throw new IllegalArgumentException("Le chemin doit commencer par « / » : " + pathTemplate);
         }
-        try {
+        try (RiotRateLimiter.Permit permit = rateLimiter.acquire(host)) {
             // L'hôte provient des enums Platform/RegionalRoute (jamais d'une saisie utilisateur)
             return extractor.apply(restClient.get()
                     .uri("https://" + host + pathTemplate, uriVariables)
@@ -88,6 +107,28 @@ public class RiotClient {
         } catch (ResourceAccessException e) {
             // Timeout, connexion refusée, DNS… : Riot n'a pas répondu
             throw new RiotUnavailableException(host, e);
+        }
+    }
+
+    /** Logue les compteurs de Riot et, sur un 429, bloque l'hôte pendant {@code Retry-After}. */
+    private void onResponse(URI uri, ClientHttpResponse response) throws IOException {
+        int status = response.getStatusCode().value();
+        HttpHeaders headers = response.getHeaders();
+        String appCount = headers.getFirst(APP_RATE_LIMIT_COUNT_HEADER);
+        String methodCount = headers.getFirst(METHOD_RATE_LIMIT_COUNT_HEADER);
+        if (status == 429) {
+            Duration retryAfter = parseRetryAfter(headers.getFirst(HttpHeaders.RETRY_AFTER));
+            if (retryAfter == null) {
+                retryAfter = RiotRateLimitException.DEFAULT_RETRY_AFTER;
+            }
+            rateLimiter.blockHost(uri.getHost(), retryAfter);
+            String limitType = headers.getFirst(RATE_LIMIT_TYPE_HEADER);
+            log.warn("Riot a répondu 429 sur {} (type : {}) : appels bloqués pendant {} s. Compteurs : app {}, méthode {}",
+                    uri.getHost(), limitType != null ? limitType : "service", retryAfter.toSeconds(),
+                    appCount, methodCount);
+        } else {
+            log.debug("Riot {}{} -> {} · compteurs : app {}, méthode {}",
+                    uri.getHost(), uri.getRawPath(), status, appCount, methodCount);
         }
     }
 

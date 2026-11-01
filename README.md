@@ -103,6 +103,9 @@ de la configuration de lancement.
 Au démarrage, il affiche la configuration utilisée, avec la clé masquée :
 `API Riot configurée : clé RGAPI-****(42 caractères), limites …`.
 Les limites de requêtes et le délai entre deux mises à jour se règlent dans `application.properties` (préfixe `riot.`).
+Le backend respecte lui-même les limites Riot, hôte par hôte. Au besoin, un appel attend son tour, jusqu'à `riot.rate-limit.max-wait`.
+En profil `dev`, chaque appel à Riot est logué avec les compteurs de quota renvoyés par Riot.
+Détails : [docs/riot-api.md](docs/riot-api.md#comment-riftmind-respecte-les-limites-tâche-15).
 Les tests utilisent une fausse clé (`src/test/resources/config/application.properties`) et n'appellent jamais Riot.
 
 ### Option 1 — tout dans Docker

@@ -32,9 +32,9 @@ class RiotClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        RiotProperties properties = new RiotProperties(FAKE_KEY, new RiotProperties.RateLimit(null, null),
+        RiotProperties properties = new RiotProperties(FAKE_KEY, RiotProperties.RateLimit.defaults(),
                 Duration.ofMinutes(2), Duration.ofSeconds(5), Duration.ofSeconds(10));
-        client = new RiotClient(builder, properties);
+        client = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
     }
 
     @Test
