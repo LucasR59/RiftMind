@@ -155,6 +155,21 @@ avec une base PostgreSQL éphémère via Testcontainers.
 
 Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur le backend.
 
+## Endpoints de l'API RiftMind
+
+| Méthode et URL | Rôle |
+|---|---|
+| `GET /api/ping` | Vérifie que l'API répond |
+| `GET /api/players/{platform}/{gameName}/{tagLine}` | Joueur par Riot ID. Cherché en base, sinon récupéré chez Riot et enregistré |
+
+- `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.
+- `gameName` et `tagLine` sont encodés dans l'URL (`%20` pour un espace), et la casse est ignorée.
+
+```bash
+curl http://localhost:8080/api/players/euw1/Joueur%20Test/EUW   # remplacer par un vrai Riot ID
+# {"puuid":"…","gameName":"Joueur Test","tagLine":"EUW","platform":"euw1","summonerLevel":512,"profileIconId":7,"lastRefreshedAt":"2026-11-01T20:00:00Z"}
+```
+
 ## Erreurs renvoyées par l'API RiftMind
 
 Les erreurs suivent le format standard [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) (`application/problem+json`).
@@ -166,7 +181,8 @@ La propriété **`code`** est stable : c'est elle que le front doit tester.
 
 | Cas | HTTP | `code` | Détail |
 |---|---|---|---|
-| Ressource introuvable (Riot 404) | 404 | `NOT_FOUND` | |
+| Requête invalide (plateforme inconnue, Riot ID vide…) | 400 | `INVALID_REQUEST` | Le détail liste les valeurs acceptées |
+| Joueur ou ressource introuvable (Riot 404) | 404 | `NOT_FOUND` | Le détail est affichable tel quel : « Aucun joueur « X#Y » sur EUW… » |
 | Limite de requêtes Riot atteinte (Riot 429) | 503 | `RIOT_RATE_LIMITED` | En-tête `Retry-After` + `retryAfterSeconds` |
 | Riot en panne, timeout, réseau (Riot 5xx) | 503 | `RIOT_UNAVAILABLE` | |
 | Clé API refusée (Riot 401/403) | 503 | `RIOT_UNAVAILABLE` | Message neutre pour le public. La cause (`Clé API Riot refusée…`) est dans les logs en ERROR |

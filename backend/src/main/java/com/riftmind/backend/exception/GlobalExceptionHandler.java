@@ -2,13 +2,17 @@ package com.riftmind.backend.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RiotApiException;
 import com.riftmind.backend.riot.RiotApiKeyException;
 import com.riftmind.backend.riot.RiotNotFoundException;
@@ -20,18 +24,38 @@ import com.riftmind.backend.riot.RiotUnavailableException;
  *
  * <p>Chaque réponse porte une propriété {@code code} stable, utilisable par le front pour choisir le message
  * à afficher (voir {@link ErrorCode}).
+ *
+ * <p>{@code @Order} le fait passer avant le gestionnaire par défaut de Spring Boot ({@code ProblemDetailsExceptionHandler}).
+ * Sans cela, ce dernier traiterait par exemple une plateforme inconnue dans l'URL, sans la propriété {@code code}.
  */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /** Codes d'erreur renvoyés dans la propriété {@code code} des réponses. */
     public enum ErrorCode {
+        INVALID_REQUEST,
         NOT_FOUND,
         RIOT_RATE_LIMITED,
         RIOT_UNAVAILABLE,
         RIOT_ERROR
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ProblemDetail handleInvalidRequest(InvalidRequestException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_REQUEST, "Requête invalide", ex.getMessage());
+    }
+
+    /** Valeur de l'URL impossible à convertir, ex. une plateforme inconnue dans {@code /api/players/xx/...}. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String detail = ex.getRequiredType() == Platform.class
+                ? "Plateforme inconnue : « " + ex.getValue() + " ». Valeurs acceptées : " + Platform.acceptedValues()
+                        + "."
+                : "Valeur invalide pour « " + ex.getName() + " » : « " + ex.getValue() + " ».";
+        return problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_REQUEST, "Requête invalide", detail);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
