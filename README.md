@@ -69,7 +69,35 @@ RiftMind/
 
 ## Lancer en développement
 
-Prérequis : Docker Desktop.
+Prérequis : Docker Desktop, et une clé API Riot (voir ci-dessous).
+
+### Clé API Riot
+
+1. Se connecter sur https://developer.riotgames.com et copier la *Development API Key*.
+2. Créer le fichier `.env` à la racine (il est ignoré par git) et y coller la clé :
+   ```bash
+   cp .env.example .env
+   # puis éditer .env :  RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-...
+   ```
+3. Démarrer (ou redémarrer) le backend : `docker compose up -d backend`.
+
+**La clé de dev expire toutes les 24 h.** Pour la renouveler chaque jour :
+1. Sur le portail Riot, cliquer sur *Regenerate API Key*.
+2. Remplacer la valeur de `RIOT_API_KEY` dans `.env`.
+3. Lancer `docker compose up -d backend`, qui recrée le conteneur avec la nouvelle clé.
+
+Pour vérifier que la clé est valide :
+
+```bash
+docker compose exec backend sh -c 'curl -s -o /dev/null -w "%{http_code}\n" -H "X-Riot-Token: $RIOT_API_KEY" https://euw1.api.riotgames.com/lol/status/v4/platform-data'
+# 200 = OK · 401 = clé absente · 403 = clé expirée ou invalide
+```
+
+> ⚠️ La clé ne doit être utilisée **que par le backend**. Ne jamais la commiter.
+> Ne jamais la mettre dans une variable `VITE_*` : ces variables sont incluses dans le JavaScript envoyé au navigateur.
+
+Si le backend est lancé depuis IntelliJ (option 2), ajouter `RIOT_API_KEY` dans les *Environment variables*
+de la configuration de lancement.
 
 ### Option 1 — tout dans Docker
 
