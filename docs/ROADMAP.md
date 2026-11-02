@@ -62,7 +62,7 @@ et **ses winrates par champion**.
   - `match_participant` : `match_id`, `puuid`, `team_id`, `champion_id`, `champion_name`, `position`, `win`, `kills`, `deaths`, `assists`, `cs`, `gold`, `damage_champions`, `vision_score`, `items int[]`, `summoner_spells int[]`, `keystone`, `secondary_style`.
   - Index : (`puuid`, `game_start desc`) et (`puuid`, `champion_id`).
   - → Clé de `match_participant` : (`match_id`, `participant_id`), car le PUUID n'est pas unique dans une partie (bots). Colonnes ajoutées : `game_name`, `tag_line`, `champ_level` (liste compacte des participants), `created_at` sur `match`. `game_start` et `queue_id` sont recopiés dans `match_participant` pour que l'historique se lise avec un seul index. `match.platform` sans contrainte (anciennes plateformes PH2/TH2). `raw` facultatif (4.6). Supprimer un match supprime ses participants.
-- [ ] **4.3** Créer les entités et repositories `Match` et `MatchParticipant`.
+- [x] **4.3** Créer les entités et repositories `Match` et `MatchParticipant`. → Entités immuables, sans relation JPA entre elles. `MatchParticipant.of(match, dto)` recopie `game_start` et `queue_id` depuis le match. `raw` est mappé en `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`), `items` et `summoner_spells` en `int[]`. `MatchRepository.findExistingIds(ids)` ne lit que les clés.
 - [ ] **4.4** Créer `MatchIngestionService.syncRecent(puuid, count=20)` :
   - récupérer les identifiants des derniers matchs ;
   - écarter ceux déjà en base ;
