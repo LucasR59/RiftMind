@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import com.riftmind.backend.model.Match;
@@ -28,6 +29,20 @@ public interface MatchRepository extends JpaRepository<Match, String> {
             from Match m where m.matchId in :matchIds
             """)
     List<MatchHeader> findHeaders(Collection<String> matchIds);
+
+    /**
+     * Efface la réponse brute ({@code raw}) des parties de ce joueur : elle contient son PUUID et son Riot ID
+     * (suppression des données, tâche 5.8). À appeler avant de supprimer ses participations.
+     *
+     * @return nombre de parties modifiées
+     */
+    @Modifying
+    @Query("""
+            update Match m set m.raw = null
+            where m.raw is not null
+              and m.matchId in (select p.matchId from MatchParticipant p where p.puuid = :puuid)
+            """)
+    int clearRawOfPlayerMatches(String puuid);
 
     /** En-tête d'une partie, sans la réponse brute. */
     default Optional<MatchHeader> findHeader(String matchId) {
