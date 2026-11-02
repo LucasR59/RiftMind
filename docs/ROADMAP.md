@@ -108,7 +108,7 @@ et **ses winrates par champion**.
 - [x] **7.9** Affichage mobile, puis vérification sur 390 px de large. → Vérifié dans Edge (sans interface) avec la vraie API Riot, à 390 px et 1280 px : accueil, profil d'un Challenger EUW, détail déplié, onglet Champions, joueur introuvable, et le bouton « Mettre à jour » de bout en bout. Aucun défilement horizontal de page. Corrigé au passage : débordement de la recherche compacte (le sélecteur de région n'affiche plus que l'abréviation, liste complète à l'ouverture), emblème de rang trop petit (blason SVG à la place du PNG à marges), première colonne figée dans les tableaux qui défilent (détail, champions).
 
 ## Phase 8 — Qualité
-- [ ] **8.1** Test E2E Playwright du parcours recherche → profil, avec une fausse API Riot (WireMock dans un profil compose `e2e`). L'ajouter à la CI.
+- [x] **8.1** Test E2E Playwright du parcours recherche → profil, avec une fausse API Riot (WireMock dans un profil compose `e2e`). L'ajouter à la CI. → Nouvelle propriété `riot.base-url` (`RIOT_BASE_URL`) : `https://euw1.api.riotgames.com/…` devient `{base-url}/euw1.api.riotgames.com/…`, le limiteur restant réglé par hôte Riot. WireMock sert les fichiers de `backend/src/test/resources/riot/` (stubs dans `e2e/wiremock/mappings/`). 4 parcours Playwright × bureau et mobile 390 px (`frontend/tests/e2e/`), workflow `e2e.yml`. Mode d'emploi : `e2e/README.md`.
 - [ ] **8.2** Mesurer le nombre d'appels Riot et d'erreurs 429 (Actuator/Micrometer), avec des logs lisibles.
 - [ ] **8.3** Changement de patch : rafraîchir la version Data Dragon automatiquement (vérification au démarrage du front).
 - [ ] **8.4** Faire évoluer le smoke test CI pour vérifier aussi `/api/players/...` avec la fausse API Riot.

@@ -24,6 +24,10 @@ class RiotConfiguration {
     void logConfiguration() {
         log.info("API Riot configurée : clé {}, limites {}, délai entre deux mises à jour {}",
                 properties.maskedApiKey(), properties.rateLimit(), properties.refreshCooldown());
+        if (properties.baseUrl() != null) {
+            log.warn("API Riot SIMULÉE : les appels partent vers {} (tests de bout en bout, RIOT_BASE_URL)",
+                    properties.baseUrl());
+        }
         if (!properties.apiKey().startsWith("RGAPI-")) {
             log.warn("La clé API Riot ne commence pas par « RGAPI- » : les appels à Riot vont probablement échouer (401/403)");
         }

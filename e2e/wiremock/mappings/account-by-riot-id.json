@@ -1,0 +1,16 @@
+{
+  "name": "Account-V1 : « Joueur Test#EUW », quelle que soit la casse",
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/europe\\.api\\.riotgames\\.com/riot/account/v1/accounts/by-riot-id/(?i)joueur(%20| )test/euw"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "X-App-Rate-Limit-Count": "1:1,1:120"
+    },
+    "bodyFileName": "riot/account.json"
+  }
+}

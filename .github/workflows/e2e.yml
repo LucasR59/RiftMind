@@ -1,0 +1,78 @@
+# Tests de bout en bout (Playwright) : front + back + base, avec une fausse API Riot (WireMock). Voir e2e/README.md.
+name: E2E (Playwright)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Recherche → profil
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Fausse clé : tous les appels partent vers WireMock, jamais vers Riot
+      RIOT_API_KEY: RGAPI-ci-placeholder-not-a-real-key
+      RIOT_BASE_URL: http://wiremock:8080
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Démarrer la pile avec la fausse API Riot
+        run: |
+          docker compose --profile e2e up -d --build --wait postgres
+          docker compose --profile e2e up -d --build wiremock backend frontend
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer Playwright
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Attendre le backend et le front
+        run: |
+          for i in $(seq 1 90); do
+            curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"' && break
+            sleep 5
+          done
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173/api/ping | grep -q '"status":"ok"' && exit 0
+            sleep 2
+          done
+          echo "La pile n'a pas démarré à temps"; exit 1
+
+      - name: Tests de bout en bout
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+
+      - name: Logs
+        if: failure()
+        run: docker compose --profile e2e logs --no-color
+
+      - name: Arrêter la pile
+        if: always()
+        run: docker compose --profile e2e down -v

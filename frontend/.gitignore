@@ -19,6 +19,8 @@ dist-ssr/
 coverage/
 __screenshots__/
 test-results/
+playwright-report/
+blob-report/
 
 # --- Caches des outils ---
 .eslintcache

@@ -1,0 +1,19 @@
+{
+  "name": "Match-V5 : 3 dernières parties (liste courte : chaque partie est ensuite demandée une fois)",
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/europe\\.api\\.riotgames\\.com/lol/match/v5/matches/by-puuid/RiftMindTestPuuid01_0000000000000000000000000000000000000000000000000000000000/ids"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": [
+      "EUW1_7000000001",
+      "EUW1_7000000002",
+      "EUW1_7000000003"
+    ]
+  }
+}
