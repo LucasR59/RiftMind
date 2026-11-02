@@ -49,6 +49,7 @@ public class RiotClient {
 
     private final RestClient restClient;
     private final RiotRateLimiter rateLimiter;
+    private final RiotMetrics metrics;
     /** Adresse de remplacement (fausse API des tests de bout en bout), ou {@code null} pour la vraie API. */
     private final String baseUrl;
 
@@ -59,7 +60,14 @@ public class RiotClient {
      * @param rateLimiter limiteur de requêtes partagé par tous les appels
      */
     public RiotClient(RestClient.Builder builder, RiotProperties properties, RiotRateLimiter rateLimiter) {
+        this(builder, properties, rateLimiter, RiotMetrics.inMemory());
+    }
+
+    /** @param metrics mesures des appels (nombre, 429, attente du limiteur), voir {@link RiotMetrics} */
+    public RiotClient(RestClient.Builder builder, RiotProperties properties, RiotRateLimiter rateLimiter,
+            RiotMetrics metrics) {
         this.rateLimiter = rateLimiter;
+        this.metrics = metrics;
         this.baseUrl = properties.baseUrl();
         this.restClient = builder
                 .defaultHeader(API_KEY_HEADER, properties.apiKey())
@@ -102,14 +110,32 @@ public class RiotClient {
         if (pathTemplate == null || !pathTemplate.startsWith("/")) {
             throw new IllegalArgumentException("Le chemin doit commencer par « / » : " + pathTemplate);
         }
-        try (RiotRateLimiter.Permit permit = rateLimiter.acquire(host)) {
+        RiotRateLimiter.Permit permit = acquire(host);
+        try (permit) {
             // L'hôte provient des enums Platform/RegionalRoute (jamais d'une saisie utilisateur)
             return extractor.apply(restClient.get()
                     .uri(urlOf(host) + pathTemplate, uriVariables)
                     .retrieve());
         } catch (ResourceAccessException e) {
             // Timeout, connexion refusée, DNS… : Riot n'a pas répondu
+            metrics.recordNoResponse(host);
             throw new RiotUnavailableException(host, e);
+        }
+    }
+
+    /** Attend son tour auprès du limiteur, en mesurant l'attente et les refus. */
+    private RiotRateLimiter.Permit acquire(String host) {
+        long start = System.nanoTime();
+        try {
+            RiotRateLimiter.Permit permit = rateLimiter.acquire(host);
+            Duration waited = Duration.ofNanos(System.nanoTime() - start);
+            if (waited.toMillis() >= 1) {
+                metrics.recordLimiterWait(host, waited);
+            }
+            return permit;
+        } catch (RiotRateLimitException e) {
+            metrics.recordLocalRateLimit(host);
+            throw e;
         }
     }
 
@@ -137,6 +163,7 @@ public class RiotClient {
         HttpHeaders headers = response.getHeaders();
         String appCount = headers.getFirst(APP_RATE_LIMIT_COUNT_HEADER);
         String methodCount = headers.getFirst(METHOD_RATE_LIMIT_COUNT_HEADER);
+        metrics.recordResponse(host, status);
         if (status == 429) {
             Duration retryAfter = parseRetryAfter(headers.getFirst(HttpHeaders.RETRY_AFTER));
             if (retryAfter == null) {
@@ -144,6 +171,7 @@ public class RiotClient {
             }
             rateLimiter.blockHost(host, retryAfter);
             String limitType = headers.getFirst(RATE_LIMIT_TYPE_HEADER);
+            metrics.recordRiotRateLimit(host, limitType != null ? limitType : "service");
             log.warn("Riot a répondu 429 sur {} (type : {}) : appels bloqués pendant {} s. Compteurs : app {}, méthode {}",
                     host, limitType != null ? limitType : "service", retryAfter.toSeconds(),
                     appCount, methodCount);

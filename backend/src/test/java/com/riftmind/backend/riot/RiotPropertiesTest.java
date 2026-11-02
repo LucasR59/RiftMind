@@ -15,7 +15,17 @@ class RiotPropertiesTest {
     private static final String FAKE_KEY = "RGAPI-00000000-1111-2222-3333-444444444444";
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withConfiguration(UserConfigurations.of(RiotConfiguration.class));
+            .withConfiguration(UserConfigurations.of(RiotConfiguration.class))
+            // Utilisé par le résumé périodique des appels (déclaré dans RiotClientConfiguration en vrai)
+            .withBean(RiotMetrics.class, RiotMetrics::inMemory);
+
+    @Test
+    void lAdresseDeLaFausseApiRiotEstFacultative() {
+        runner.withPropertyValues("riot.api-key=" + FAKE_KEY).run(context ->
+                assertThat(context.getBean(RiotProperties.class).baseUrl()).isNull());
+        runner.withPropertyValues("riot.api-key=" + FAKE_KEY, "riot.base-url=http://wiremock:8080/").run(context ->
+                assertThat(context.getBean(RiotProperties.class).baseUrl()).isEqualTo("http://wiremock:8080"));
+    }
 
     @Test
     void appliqueLesValeursParDefautDUneCleDeDev() {

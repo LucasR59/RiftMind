@@ -6,18 +6,36 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
-/** Active {@link RiotProperties} et signale au démarrage la configuration Riot utilisée (clé masquée). */
+/**
+ * Active {@link RiotProperties}, signale au démarrage la configuration Riot utilisée (clé masquée), et écrit
+ * régulièrement dans les logs un résumé des appels à Riot ({@code riot.metrics-log-interval}, 10 min par défaut).
+ */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(RiotProperties.class)
+@EnableScheduling
 class RiotConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(RiotConfiguration.class);
 
     private final RiotProperties properties;
+    private final RiotMetrics metrics;
 
-    RiotConfiguration(RiotProperties properties) {
+    RiotConfiguration(RiotProperties properties, RiotMetrics metrics) {
         this.properties = properties;
+        this.metrics = metrics;
+    }
+
+    /** Résumé des appels depuis le précédent ; rien si Riot n'a pas été appelé. */
+    @Scheduled(fixedDelayString = "${riot.metrics-log-interval:PT10M}",
+            initialDelayString = "${riot.metrics-log-interval:PT10M}")
+    void logMetricsSummary() {
+        String summary = metrics.summaryAndReset();
+        if (summary != null) {
+            log.info("Appels à l'API Riot depuis le dernier résumé : {}", summary);
+        }
     }
 
     @EventListener(ApplicationReadyEvent.class)

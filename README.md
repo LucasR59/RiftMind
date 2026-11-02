@@ -111,6 +111,11 @@ Au démarrage, il affiche la configuration utilisée, avec la clé masquée :
 Les limites de requêtes et le délai entre deux mises à jour se règlent dans `application.properties` (préfixe `riot.`).
 Le backend respecte lui-même les limites Riot, hôte par hôte. Au besoin, un appel attend son tour, jusqu'à `riot.rate-limit.max-wait`.
 En profil `dev`, chaque appel à Riot est logué avec les compteurs de quota renvoyés par Riot.
+Toutes les 10 minutes (`riot.metrics-log-interval`), un résumé est écrit dans les logs s'il y a eu des appels :
+`Appels à l'API Riot depuis le dernier résumé : 42 appels (europe… : 30, euw1… : 12) · limites Riot (429) : 0 · refus du limiteur local : 0`.
+En profil `dev`, les mêmes mesures sont sur `/actuator/metrics` : `riot.api.calls` (par `host` et `status`),
+`riot.rate.limited` (par `host`, `source` = `riot` ou `local`, `type`) et `riot.limiter.wait`,
+ex. `curl "localhost:8080/actuator/metrics/riot.rate.limited?tag=source:riot"`.
 Détails : [docs/riot-api.md](docs/riot-api.md#comment-riftmind-respecte-les-limites-tâche-15).
 Les tests utilisent une fausse clé (`src/test/resources/config/application.properties`) et n'appellent jamais Riot.
 Ils utilisent de vraies réponses Riot anonymisées (`src/test/resources/riot/`, régénérées par `node scripts/riot-fixtures.mjs`).
