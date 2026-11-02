@@ -2,13 +2,12 @@ import {
   createRouter,
   createWebHistory,
   type RouteLocationNormalized,
-  type RouteLocationRaw,
   type RouteRecordRaw,
   type RouterHistory,
 } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import { findPlatform } from '@/constants/platforms'
-import { formatRiotId, fromRiotIdSlug, toRiotIdSlug, type RiotId } from '@/utils/riotId'
+import { formatRiotId, fromRiotIdSlug } from '@/utils/riotId'
 
 export const routes: RouteRecordRaw[] = [
   {
@@ -61,10 +60,7 @@ export const routes: RouteRecordRaw[] = [
   },
 ]
 
-/** Lien vers le profil d'un joueur, ex. `{ name: 'player', params: { platform: 'euw1', riotId: 'Nom-TAG' } }`. */
-export function playerRoute(platform: string, riotId: RiotId): RouteLocationRaw {
-  return { name: 'player', params: { platform, riotId: toRiotIdSlug(riotId) } }
-}
+export { playerRoute } from './links'
 
 /** Crée le router. `history` est remplaçable pour les tests (`createMemoryHistory()`). */
 export function createAppRouter(
