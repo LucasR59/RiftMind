@@ -2,10 +2,12 @@ package com.riftmind.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.groups.Tuple.tuple;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import org.springframework.context.annotation.Import;
 
 import com.riftmind.backend.TestMatches;
 import com.riftmind.backend.TestcontainersConfiguration;
+import com.riftmind.backend.dto.ChampionStatsResponse;
 import com.riftmind.backend.dto.CompactParticipantResponse;
 import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
@@ -210,6 +213,90 @@ class MatchQueryServiceTest {
         matchRepository.save(new Match("EUW1_2", "EUW1", 0, "16.21", T0, 600, false, null, T0));
 
         assertThatThrownBy(() -> service.getMatch("EUW1_2")).isInstanceOf(MatchNotFoundException.class);
+    }
+
+    // --- 5.3 : stats par champion ---
+
+    /** Données connues : 3 Kalista + 1 remake Kalista en SoloQ, 1 Annie en SoloQ, 1 Annie en Flex. */
+    private void saveChampionGames() {
+        save(game(1).queue(420).duration(1500).me(429, "Kalista", "BOTTOM", true, 6, 4, 3, 250, 19708),
+                game(2).queue(420).duration(1800).me(429, "Kalista", "BOTTOM", false, 2, 5, 1, 200, 10000),
+                game(3).queue(420).duration(1200).me(429, "Kalista", "BOTTOM", true, 10, 0, 5, 300, 30000),
+                game(4).queue(420).duration(200).remake().me(429, "Kalista", "BOTTOM", false, 0, 9, 0, 5, 100),
+                game(5).queue(420).duration(1800).me(1, "Annie", "MIDDLE", true, 5, 0, 7, 180, 25000),
+                game(6).queue(440).duration(1800).me(1, "Annie", "MIDDLE", false, 3, 6, 2, 150, 12000));
+    }
+
+    @Test
+    void calculeLesStatsParChampionSurDesDonneesConnues() {
+        saveChampionGames();
+
+        List<ChampionStatsResponse> stats = service.getChampionStats(RiotFixtures.PUUID, null);
+
+        // Le plus joué d'abord ; le remake n'est pas compté
+        assertThat(stats).extracting(ChampionStatsResponse::championName).containsExactly("Kalista", "Annie");
+        ChampionStatsResponse kalista = stats.getFirst();
+        assertThat(kalista.championId()).isEqualTo(429);
+        assertThat(kalista.games()).isEqualTo(3);
+        assertThat(kalista.wins()).isEqualTo(2);
+        assertThat(kalista.losses()).isEqualTo(1);
+        assertThat(kalista.winrate()).isCloseTo(66.667, within(0.001));
+        // 18 / 9 / 9 en 3 parties
+        assertThat(kalista.avgKills()).isEqualTo(6.0);
+        assertThat(kalista.avgDeaths()).isEqualTo(3.0);
+        assertThat(kalista.avgAssists()).isEqualTo(3.0);
+        assertThat(kalista.kda()).isEqualTo(3.0);
+        // 750 CS en 4500 s = 75 min
+        assertThat(kalista.csPerMinute()).isEqualTo(10.0);
+        assertThat(kalista.avgDamage()).isCloseTo(19902.667, within(0.001));
+
+        ChampionStatsResponse annie = stats.get(1);
+        assertThat(annie.games()).isEqualTo(2);
+        assertThat(annie.winrate()).isEqualTo(50.0);
+        assertThat(annie.kda()).isEqualTo((8 + 9) / 6.0);
+        assertThat(annie.csPerMinute()).isEqualTo(330 / 60.0);
+    }
+
+    @Test
+    void lesStatsSeFiltrentParFile() {
+        saveChampionGames();
+
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, 440)).singleElement().satisfies(annie -> {
+            assertThat(annie.championName()).isEqualTo("Annie");
+            assertThat(annie.games()).isEqualTo(1);
+            assertThat(annie.wins()).isZero();
+        });
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, 420))
+                .extracting(ChampionStatsResponse::championName, ChampionStatsResponse::games)
+                .containsExactly(tuple("Kalista", 3L), tuple("Annie", 1L));
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, 450)).isEmpty();
+    }
+
+    @Test
+    void sansAucuneMortLeKdaVautEliminationsPlusAssistances() {
+        save(game(1).me(1, "Annie", "MIDDLE", true, 5, 0, 7, 180, 25000));
+
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, null).getFirst().kda()).isEqualTo(12.0);
+    }
+
+    @Test
+    void lesStatsNeComptentQueLesPartiesDuJoueur() {
+        save(game(1));
+
+        // 10 joueurs dans la partie, mais un seul champion pour le joueur
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, null)).hasSize(1);
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, null).getFirst().games()).isEqualTo(1);
+    }
+
+    @Test
+    void unJoueurSansPartieNAAucuneStat() {
+        assertThat(service.getChampionStats(RiotFixtures.PUUID, null)).isEmpty();
+    }
+
+    @Test
+    void lesStatsDUnPuuidInconnuDonnentJoueurIntrouvable() {
+        assertThatThrownBy(() -> service.getChampionStats(RiotFixtures.puuid(9), null))
+                .isInstanceOf(PlayerNotFoundException.class);
     }
 
     @ParameterizedTest
