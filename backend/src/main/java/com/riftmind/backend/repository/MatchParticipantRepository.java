@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import com.riftmind.backend.model.ChampionStatsRow;
@@ -13,6 +14,15 @@ import com.riftmind.backend.model.MatchParticipant;
 
 /** Accès à la table {@code match_participant}. La clé est le couple (match, numéro du participant). */
 public interface MatchParticipantRepository extends JpaRepository<MatchParticipant, MatchParticipant.Key> {
+
+    /**
+     * Supprime toutes les participations de ce joueur (suppression des données, tâche 5.8), en une requête.
+     *
+     * @return nombre de lignes supprimées
+     */
+    @Modifying
+    @Query("delete from MatchParticipant p where p.puuid = :puuid")
+    int deleteAllByPuuid(String puuid);
 
     /** Les joueurs d'une partie, dans l'ordre de Riot (équipe bleue puis rouge). */
     List<MatchParticipant> findByMatchIdOrderByParticipantId(String matchId);

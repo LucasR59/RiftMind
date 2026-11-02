@@ -61,6 +61,15 @@ public interface PlayerRepository extends JpaRepository<Player, String> {
             """)
     int releaseRefresh(String puuid, Instant claimedAt, Instant previous);
 
+    /**
+     * Supprime le joueur en une requête. Ses rangs sont supprimés par la base ({@code ON DELETE CASCADE}).
+     *
+     * @return 1 si le joueur existait, 0 sinon
+     */
+    @Modifying
+    @Query("delete from Player p where p.puuid = :puuid")
+    int deleteByPuuid(String puuid);
+
     /** Joueur le plus récemment rafraîchi avec ce Riot ID (voir {@link #findAllByRiotId}). */
     default Optional<Player> findByRiotId(Platform platform, String gameName, String tagLine) {
         return findAllByRiotId(platform, gameName, tagLine).stream().findFirst();
