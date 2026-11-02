@@ -1,4 +1,4 @@
-import type { RouteLocationRaw } from 'vue-router'
+import type { RouteLocationNamedRaw } from 'vue-router'
 
 import { toRiotIdSlug, type RiotId } from '@/utils/riotId'
 
@@ -6,6 +6,6 @@ import { toRiotIdSlug, type RiotId } from '@/utils/riotId'
 // le router (qui importe lui-même les vues).
 
 /** Lien vers le profil d'un joueur, ex. `{ name: 'player', params: { platform: 'euw1', riotId: 'Nom-TAG' } }`. */
-export function playerRoute(platform: string, riotId: RiotId): RouteLocationRaw {
+export function playerRoute(platform: string, riotId: RiotId): RouteLocationNamedRaw {
   return { name: 'player', params: { platform, riotId: toRiotIdSlug(riotId) } }
 }

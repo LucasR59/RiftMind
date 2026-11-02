@@ -104,7 +104,7 @@ describe('useRecentSearches', () => {
 })
 
 describe('PlayerSearch', () => {
-  it('ouvre le profil du joueur et retient la recherche', async () => {
+  it('ouvre le profil du joueur', async () => {
     const { router, wrapper } = await mountWithRouter(PlayerSearch)
 
     await wrapper.find('select').setValue('kr')
@@ -113,11 +113,6 @@ describe('PlayerSearch', () => {
     // La page du profil est chargée à la demande : attendre la fin de la navigation
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('player'))
     expect(router.currentRoute.value.params).toEqual({ platform: 'kr', riotId: 'Été Test-KR1' })
-    expect(useRecentSearches().items.value[0]).toEqual({
-      platform: 'kr',
-      gameName: 'Été Test',
-      tagLine: 'KR1',
-    })
   })
 
   it("affiche l'erreur de format sans changer de page", async () => {

@@ -10,12 +10,13 @@ import { parseRiotIdInput } from '@/utils/riotId'
 
 /**
  * Recherche d'un joueur : région + « Nom#TAG ». Vérifie le format avant d'ouvrir le profil ; c'est la page du
- * profil qui dira si le joueur existe. La région proposée est celle de la dernière recherche.
+ * profil qui dira si le joueur existe (et l'ajoutera aux recherches récentes). La région proposée est celle de la
+ * dernière recherche.
  */
 withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
 
 const router = useRouter()
-const { items: recent, add: addRecent } = useRecentSearches()
+const { items: recent } = useRecentSearches()
 
 const platform = ref(recent.value[0]?.platform ?? DEFAULT_PLATFORM_ID)
 const query = ref('')
@@ -30,7 +31,6 @@ async function submit() {
   }
   error.value = null
   query.value = ''
-  addRecent({ platform: platform.value, ...parsed.riotId })
   await router.push(playerRoute(platform.value, parsed.riotId))
 }
 </script>
