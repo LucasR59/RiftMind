@@ -212,6 +212,32 @@ class MatchIngestionServiceTest {
         assertThat(participantRepository.findByMatchIdOrderByParticipantId(matchId(2))).hasSize(10);
     }
 
+    /** Tâche 4.6 : Riot interdit d'afficher l'historique des parties personnalisées. */
+    @Test
+    void unePartiePersonnaliseeEstIgnoreeEtNEstPasRedemandee() {
+        String custom = matchJson(matchId(2)).replace("\"queueId\": 420", "\"queueId\": 0")
+                .replace("\"gameType\": \"MATCHED_GAME\"", "\"gameType\": \"CUSTOM_GAME\"");
+        riotListsMatches(IDS_URL, List.of(matchId(1), matchId(2)));
+        riotReturnsMatch(EUROPE, matchId(1));
+        riot.expect(requestTo(EUROPE + "/lol/match/v5/matches/" + matchId(2)))
+                .andRespond(withSuccess(custom, MediaType.APPLICATION_JSON));
+
+        service.syncRecent(player);
+
+        // Ni joueurs (donc absente de l'historique et des stats), ni réponse brute : seul un marqueur reste
+        assertThat(participantRepository.findByMatchIdOrderByParticipantId(matchId(2))).isEmpty();
+        Match marker = matchRepository.findById(matchId(2)).orElseThrow();
+        assertThat(marker.getQueueId()).isZero();
+        assertThat(marker.getRaw()).isNull();
+        assertThat(participantRepository.findByMatchIdOrderByParticipantId(matchId(1))).hasSize(10);
+
+        // Le marqueur évite de la redemander à Riot à chaque synchronisation
+        riot.reset();
+        riotListsMatches(IDS_URL, List.of(matchId(1), matchId(2)));
+        assertThat(service.syncRecent(player).alreadyKnown()).isEqualTo(2);
+        riot.verify();
+    }
+
     @Test
     void unePartieIntrouvableChezRiotEstIgnoree() {
         riotListsMatches(IDS_URL, List.of(matchId(1), matchId(2), matchId(3)));
