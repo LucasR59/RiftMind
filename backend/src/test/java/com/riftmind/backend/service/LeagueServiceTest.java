@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import com.riftmind.backend.CleanDatabase;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
@@ -51,10 +52,11 @@ import com.riftmind.backend.riot.dto.LeagueEntryDto;
  *
  * <p>Riot est simulé par {@link MockRestServiceServer} avec les vraies réponses anonymisées ({@link RiotFixtures}).
  * La base est un vrai PostgreSQL, sans transaction de test : chaque écriture est validée comme en production, et
- * les tables sont vidées avant chaque test.
+ * les tables sont vidées avant et après chaque test ({@link CleanDatabase}).
  */
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@CleanDatabase
 @Import(TestcontainersConfiguration.class)
 class LeagueServiceTest {
 
@@ -78,8 +80,6 @@ class LeagueServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Supprimer les joueurs supprime aussi leurs rangs (ON DELETE CASCADE)
-        playerRepository.deleteAll();
         RestClient.Builder builder = RestClient.builder();
         riot = MockRestServiceServer.bindTo(builder).build();
         RiotProperties properties = new RiotProperties("RGAPI-test-key-not-a-real-key",
