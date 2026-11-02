@@ -84,19 +84,22 @@ class PlayerServiceTest {
     private MockRestServiceServer riot;
     private RiotClient riotClient;
     private LeagueService leagueService;
+    private MatchIngestionService matchIngestionService;
+    private RiotProperties properties;
     private PlayerService service;
 
     @BeforeEach
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         riot = MockRestServiceServer.bindTo(builder).build();
-        RiotProperties properties = new RiotProperties("RGAPI-test-key-not-a-real-key",
+        properties = new RiotProperties("RGAPI-test-key-not-a-real-key",
                 RiotProperties.RateLimit.defaults(), Duration.ofMinutes(2), Duration.ofSeconds(5),
                 Duration.ofSeconds(10));
         riotClient = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         leagueService = new LeagueService(riotClient, leagueEntryRepository, transactionManager, clock);
-        service = new PlayerService(riotClient, repository, leagueService, clock);
+        matchIngestionService = mock(MatchIngestionService.class);
+        service = new PlayerService(riotClient, repository, leagueService, matchIngestionService, properties, clock);
     }
 
     private void riotRespondsWithAccountAndSummoner(String accountUrl, String summonerUrl) {
@@ -190,7 +193,8 @@ class PlayerServiceTest {
     @Test
     void laDateDeMiseAJourRenvoyeeEstCelleStockeeEnBase() {
         Instant withNanos = Instant.parse("2026-11-01T23:22:34.164986960Z");
-        service = new PlayerService(riotClient, repository, leagueService, Clock.fixed(withNanos, ZoneOffset.UTC));
+        service = new PlayerService(riotClient, repository, leagueService, matchIngestionService, properties,
+                Clock.fixed(withNanos, ZoneOffset.UTC));
         riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
 
         Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
@@ -316,8 +320,8 @@ class PlayerServiceTest {
         riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
         LeagueService mockedLeagueService = mock(LeagueService.class);
 
-        Player player = new PlayerService(riotClient, racingRepository, mockedLeagueService,
-                Clock.fixed(NOW, ZoneOffset.UTC))
+        Player player = new PlayerService(riotClient, racingRepository, mockedLeagueService, matchIngestionService,
+                properties, Clock.fixed(NOW, ZoneOffset.UTC))
                 .getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
 
         assertThat(player).isSameAs(savedByOtherRequest);
