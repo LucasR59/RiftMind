@@ -10,6 +10,7 @@ export default mergeConfig(
       include: ['tests/unit/**/*.spec.ts'],
       exclude: [...configDefaults.exclude, 'tests/e2e/**'],
       restoreMocks: true,
+      setupFiles: ['tests/setup.ts'],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),
