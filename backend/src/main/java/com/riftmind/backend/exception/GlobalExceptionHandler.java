@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
     public enum ErrorCode {
         INVALID_REQUEST,
         NOT_FOUND,
+        REFRESH_COOLDOWN,
         RIOT_RATE_LIMITED,
         RIOT_UNAVAILABLE,
         RIOT_ERROR
@@ -61,6 +62,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
         return problem(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, "Ressource introuvable", ex.getMessage());
+    }
+
+    /** Mise à jour demandée avant la fin du délai minimum : 429, avec le temps restant. */
+    @ExceptionHandler(RefreshCooldownException.class)
+    public ResponseEntity<ProblemDetail> handleRefreshCooldown(RefreshCooldownException ex) {
+        long seconds = ex.retryAfterSeconds();
+        ProblemDetail body = problem(HttpStatus.TOO_MANY_REQUESTS, ErrorCode.REFRESH_COOLDOWN,
+                "Mise à jour trop récente",
+                "Ce joueur vient d'être mis à jour. Nouvelle mise à jour possible dans " + seconds + " s.");
+        body.setProperty("retryAfterSeconds", seconds);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds))
+                .body(body);
     }
 
     @ExceptionHandler(RiotNotFoundException.class)

@@ -164,6 +164,7 @@ Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur l
 |---|---|
 | `GET /api/ping` | Vérifie que l'API répond |
 | `GET /api/players/{platform}/{gameName}/{tagLine}` | Joueur par Riot ID, avec ses rangs SoloQ et Flex. Cherché en base, sinon récupéré chez Riot et enregistré |
+| `POST /api/players/{puuid}/refresh` | Met à jour le joueur depuis Riot (Riot ID, niveau, rangs, nouvelles parties). Au plus une fois toutes les 2 min (`riot.refresh-cooldown`) |
 | `GET /api/matches/{matchId}` | Détail d'une partie : 10 joueurs et totaux par équipe. Partie inconnue ou personnalisée : 404 |
 | `GET /api/players/{puuid}/matches?page=0&size=10&queue=420` | Historique paginé (du plus récent au plus ancien), lu en base. `queue` facultatif, `size` de 1 à 50 |
 | `GET /api/players/{puuid}/champions?queue=420` | Stats par champion (parties, winrate, KDA, CS/min, dégâts), hors remakes. `queue` facultatif |
@@ -192,6 +193,7 @@ La propriété **`code`** est stable : c'est elle que le front doit tester.
 |---|---|---|---|
 | Requête invalide (plateforme inconnue, Riot ID vide…) | 400 | `INVALID_REQUEST` | Le détail liste les valeurs acceptées |
 | Joueur ou ressource introuvable (Riot 404) | 404 | `NOT_FOUND` | Le détail est affichable tel quel : « Aucun joueur « X#Y » sur EUW… » |
+| Mise à jour d'un joueur trop récente (moins de 2 min) | 429 | `REFRESH_COOLDOWN` | En-tête `Retry-After` + `retryAfterSeconds` (temps restant) |
 | Limite de requêtes Riot atteinte (Riot 429) | 503 | `RIOT_RATE_LIMITED` | En-tête `Retry-After` + `retryAfterSeconds` |
 | Riot en panne, timeout, réseau (Riot 5xx) | 503 | `RIOT_UNAVAILABLE` | |
 | Clé API refusée (Riot 401/403) | 503 | `RIOT_UNAVAILABLE` | Message neutre pour le public. La cause (`Clé API Riot refusée…`) est dans les logs en ERROR |

@@ -6,11 +6,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -25,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
+import com.riftmind.backend.exception.RefreshCooldownException;
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.riot.Platform;
@@ -161,6 +165,51 @@ class PlayerControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.detail").value("Le nom du Riot ID ne doit pas être vide."));
+    }
+
+    @Test
+    void laMiseAJourRenvoieLeJoueurAJourAvecSesRangs() throws Exception {
+        when(playerService.refresh(RiotFixtures.PUUID)).thenReturn(mainPlayer());
+        when(leagueService.findByPuuid(RiotFixtures.PUUID)).thenReturn(List.of(
+                new LeagueEntry(RiotFixtures.PUUID, RankedQueue.RANKED_SOLO_5x5, "CHALLENGER", "I", 1234, 250, 200,
+                        false, REFRESHED_AT)));
+
+        mockMvc.perform(post("/api/players/{puuid}/refresh", RiotFixtures.PUUID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.puuid").value(RiotFixtures.PUUID))
+                .andExpect(jsonPath("$.lastRefreshedAt").value("2026-11-01T20:00:00Z"))
+                .andExpect(jsonPath("$.ranks[0].tier").value("CHALLENGER"));
+    }
+
+    @Test
+    void uneMiseAJourTropRecenteDonne429AvecLeTempsRestant() throws Exception {
+        when(playerService.refresh(RiotFixtures.PUUID))
+                .thenThrow(new RefreshCooldownException(Duration.ofMillis(89_200)));
+
+        mockMvc.perform(post("/api/players/{puuid}/refresh", RiotFixtures.PUUID))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(header().string("Retry-After", "90"))
+                .andExpect(jsonPath("$.code").value("REFRESH_COOLDOWN"))
+                .andExpect(jsonPath("$.retryAfterSeconds").value(90))
+                .andExpect(jsonPath("$.detail").value(containsString("dans 90 s")));
+    }
+
+    @Test
+    void laMiseAJourDUnJoueurInconnuDonne404() throws Exception {
+        when(playerService.refresh("inconnu")).thenThrow(PlayerNotFoundException.unknownPuuid("inconnu"));
+
+        mockMvc.perform(post("/api/players/inconnu/refresh"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    void laMiseAJourNAcceptePasGet() throws Exception {
+        mockMvc.perform(get("/api/players/{puuid}/refresh", RiotFixtures.PUUID))
+                .andExpect(status().isMethodNotAllowed());
+
+        verifyNoInteractions(playerService);
     }
 
     @Test

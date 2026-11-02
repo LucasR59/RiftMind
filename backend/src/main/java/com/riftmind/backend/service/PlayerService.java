@@ -1,6 +1,7 @@
 package com.riftmind.backend.service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -13,17 +14,19 @@ import org.springframework.stereotype.Service;
 
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
+import com.riftmind.backend.exception.RefreshCooldownException;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.PlayerRepository;
 import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotNotFoundException;
+import com.riftmind.backend.riot.RiotProperties;
 import com.riftmind.backend.riot.dto.AccountDto;
 import com.riftmind.backend.riot.dto.LeagueEntryDto;
 import com.riftmind.backend.riot.dto.SummonerDto;
 
 /**
- * Recherche d'un joueur par Riot ID (tâche 2.4).
+ * Recherche d'un joueur par Riot ID (tâche 2.4) et mise à jour depuis Riot (tâche 5.5).
  *
  * <p>Pas de transaction autour de la méthode : les appels à Riot peuvent durer plusieurs secondes (attente du
  * limiteur de requêtes), et une transaction garderait pendant tout ce temps une connexion à la base. Chaque accès au
@@ -35,18 +38,23 @@ public class PlayerService {
     private static final Logger log = LoggerFactory.getLogger(PlayerService.class);
 
     static final String ACCOUNT_BY_RIOT_ID = "/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}";
+    static final String ACCOUNT_BY_PUUID = "/riot/account/v1/accounts/by-puuid/{puuid}";
     static final String SUMMONER_BY_PUUID = "/lol/summoner/v4/summoners/by-puuid/{puuid}";
 
     private final RiotClient riotClient;
     private final PlayerRepository playerRepository;
     private final LeagueService leagueService;
+    private final MatchIngestionService matchIngestionService;
+    private final Duration refreshCooldown;
     private final Clock clock;
 
     public PlayerService(RiotClient riotClient, PlayerRepository playerRepository, LeagueService leagueService,
-            Clock clock) {
+            MatchIngestionService matchIngestionService, RiotProperties riotProperties, Clock clock) {
         this.riotClient = riotClient;
         this.playerRepository = playerRepository;
         this.leagueService = leagueService;
+        this.matchIngestionService = matchIngestionService;
+        this.refreshCooldown = riotProperties.refreshCooldown();
         this.clock = clock;
     }
 
@@ -83,11 +91,54 @@ public class PlayerService {
         SummonerDto summoner = fetchSummoner(platform, account, name, tag);
         List<LeagueEntryDto> ranks = leagueService.fetch(platform, account.puuid());
 
-        // PostgreSQL stocke les dates à la microseconde : on tronque pour renvoyer la même valeur qu'à la relecture
-        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        Instant now = now();
         Player player = save(platform, account, summoner, name, tag, now);
         leagueService.save(player.getPuuid(), ranks, now);
         return player;
+    }
+
+    /**
+     * Met à jour le joueur depuis Riot : Riot ID (il a pu changer), niveau, icône, rangs, puis ses
+     * {@value MatchIngestionService#DEFAULT_COUNT} dernières parties (seules les nouvelles sont demandées).
+     *
+     * <p>Un délai minimum ({@code riot.refresh-cooldown}, 2 min par défaut) sépare deux mises à jour du même joueur,
+     * pour ménager les limites de l'API Riot. Il est réservé en base avant tout appel à Riot
+     * ({@link PlayerRepository#claimRefresh}) : deux clics simultanés ne lancent qu'une mise à jour. Si Riot échoue, la
+     * réservation est annulée et le joueur peut réessayer tout de suite ; ce qui a déjà été enregistré (joueur, rangs,
+     * parties récupérées) est gardé.
+     *
+     * @throws PlayerNotFoundException                    si aucun joueur n'a ce PUUID
+     * @throws RefreshCooldownException                   si la dernière mise à jour est trop récente
+     * @throws com.riftmind.backend.riot.RiotApiException si Riot est indisponible ou refuse un appel
+     */
+    public Player refresh(String puuid) {
+        Player player = playerRepository.findById(puuid)
+                .orElseThrow(() -> PlayerNotFoundException.unknownPuuid(puuid));
+        Instant previous = player.getLastRefreshedAt();
+        Instant now = now();
+        if (playerRepository.claimRefresh(puuid, now, now.minus(refreshCooldown)) == 0) {
+            // Relu en base : une autre requête vient peut-être de faire la mise à jour
+            Instant last = playerRepository.findById(puuid).map(Player::getLastRefreshedAt).orElse(previous);
+            throw new RefreshCooldownException(Duration.between(now, last.plus(refreshCooldown)));
+        }
+        try {
+            Platform platform = player.getPlatform();
+            AccountDto account = riotClient.get(platform.accountRoute(), ACCOUNT_BY_PUUID, AccountDto.class, puuid);
+            SummonerDto summoner = riotClient.get(platform, SUMMONER_BY_PUUID, SummonerDto.class, puuid);
+            List<LeagueEntryDto> ranks = leagueService.fetch(platform, puuid);
+
+            player.refresh(displayName(account.gameName(), player.getGameName()),
+                    displayName(account.tagLine(), player.getTagLine()), platform,
+                    Math.toIntExact(summoner.summonerLevel()), summoner.profileIconId(), now);
+            Player saved = playerRepository.save(player);
+            leagueService.save(puuid, ranks, now);
+            matchIngestionService.syncRecent(saved);
+            log.info("Joueur {} mis à jour", saved);
+            return saved;
+        } catch (RuntimeException e) {
+            playerRepository.releaseRefresh(puuid, now, previous);
+            throw e;
+        }
     }
 
     private AccountDto fetchAccount(Platform platform, String name, String tag) {
@@ -131,6 +182,11 @@ public class PlayerService {
             log.debug("Joueur {} enregistré en parallèle par une autre requête", account.puuid());
             return playerRepository.findById(account.puuid()).orElseThrow(() -> e);
         }
+    }
+
+    /** PostgreSQL stocke les dates à la microseconde : on tronque pour renvoyer la même valeur qu'à la relecture. */
+    private Instant now() {
+        return clock.instant().truncatedTo(ChronoUnit.MICROS);
     }
 
     private static String requireNotBlank(String value, String field) {
