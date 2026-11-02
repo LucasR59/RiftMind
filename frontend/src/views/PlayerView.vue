@@ -6,6 +6,7 @@ import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import PlayerHeader from '@/components/player/PlayerHeader.vue'
 import RankCards from '@/components/player/RankCards.vue'
+import MatchHistory from '@/components/match/MatchHistory.vue'
 import { getPlayer } from '@/api/players'
 import { findPlatform } from '@/constants/platforms'
 import { useRecentSearches } from '@/composables/useRecentSearches'
@@ -99,7 +100,13 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
         <aside class="player-page__aside">
           <RankCards :ranks="player.ranks" />
         </aside>
-        <div class="player-page__main" :data-refresh-key="refreshKey" />
+        <div class="player-page__main">
+          <MatchHistory
+            :puuid="player.puuid"
+            :platform="player.platform"
+            :refresh-key="refreshKey"
+          />
+        </div>
       </div>
     </template>
   </div>
