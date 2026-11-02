@@ -94,7 +94,7 @@ et **ses winrates par champion**.
 
 ## Phase 7 — Front : pages
 - [x] **7.1** Accueil : barre de recherche « Nom#TAG » + choix de la région, validation du format, recherches récentes enregistrées dans `localStorage`. → `PlayerSearch` (région + « Nom#TAG », messages d'erreur clairs, région de la dernière recherche proposée) et `RecentSearches` (8 au plus, sans doublon de casse, retirables). Validation : nom de 1 à 16 caractères, tag de 2 à 5 lettres ou chiffres (toutes écritures). `playerRoute` déplacé dans `router/links.ts` (évite une importation circulaire).
-- [ ] **7.2** En-tête du profil : icône, nom#tag, niveau, bouton « Mettre à jour » (avec compte à rebours pendant le délai d'attente), « mis à jour il y a X min ».
+- [x] **7.2** En-tête du profil : icône, nom#tag, niveau, bouton « Mettre à jour » (avec compte à rebours pendant le délai d'attente), « mis à jour il y a X min ». → `PlayerHeader` : compte à rebours calculé avec `lastRefreshedAt` + 2 min (`REFRESH_COOLDOWN_SECONDS`, valeur par défaut du back), puis corrigé par le `retryAfterSeconds` d'une réponse 429. `PlayerView` charge le joueur, remplace l'URL par l'écriture exacte du Riot ID sans recharger, et l'ajoute aux recherches récentes une fois trouvé (plus à l'envoi du formulaire). Outils : `utils/format.ts` (dates relatives, durées, nombres en français) et `useNow()`.
 - [ ] **7.3** Cartes de rang SoloQ et Flex : emblème, rang, LP, victoires/défaites, winrate.
 - [ ] **7.4** Liste des games, avec une carte par partie :
   - couleur selon victoire ou défaite, file de jeu, durée, date relative ;

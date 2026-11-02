@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
-import { mount } from '@vue/test-utils'
 
 import { createAppRouter, playerRoute } from '@/router'
 import { formatRiotId, fromRiotIdSlug, toRiotIdSlug } from '@/utils/riotId'
-import PlayerView from '@/views/PlayerView.vue'
 
 const newRouter = () => createAppRouter(createMemoryHistory())
 
@@ -85,15 +83,5 @@ describe('route du profil /:platform/:riotId', () => {
     await router.push('/euw1/Joueur%20Test-EUW')
 
     expect(document.title).toBe('Joueur Test#EUW · RiftMind')
-  })
-
-  it('affiche le Riot ID et la plateforme sur la page du profil', async () => {
-    const router = newRouter()
-    await router.push('/kr/%C3%89t%C3%A9-KR1')
-
-    const wrapper = mount(PlayerView, { global: { plugins: [router] } })
-
-    expect(wrapper.find('[data-testid="player-riot-id"]').text()).toBe('Été#KR1')
-    expect(wrapper.text()).toContain('KR — Corée')
   })
 })

@@ -3,6 +3,12 @@ import type { Player } from '@/types/player'
 import type { ChampionStats, PlayerSummary } from '@/types/stats'
 
 /**
+ * Délai minimum entre deux mises à jour d'un joueur : valeur par défaut de `riot.refresh-cooldown` côté backend.
+ * Sert au compte à rebours du bouton ; si le backend est configuré autrement, sa réponse 429 fait foi.
+ */
+export const REFRESH_COOLDOWN_SECONDS = 120
+
+/**
  * Joueur par Riot ID (`gameName#tagLine`) sur une plateforme (`euw1`, ou l'abréviation `EUW`).
  * Le backend le cherche en base, sinon chez Riot. Inconnu : `ApiError` 404 `NOT_FOUND`.
  */
