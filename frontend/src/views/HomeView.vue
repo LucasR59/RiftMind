@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import BackendStatus from '@/components/BackendStatus.vue'
+import PlayerSearch from '@/components/PlayerSearch.vue'
+import RecentSearches from '@/components/RecentSearches.vue'
 import logoUrl from '@/assets/logo.svg'
 </script>
 
@@ -11,7 +13,13 @@ import logoUrl from '@/assets/logo.svg'
 
     <h1 class="hero__title">RiftMind</h1>
 
-    <p class="hero__tagline">Bienvenue sur RiftMind.</p>
+    <p class="hero__tagline">
+      Rang, historique des parties et winrate par champion, sur tous les serveurs.
+    </p>
+
+    <PlayerSearch class="hero__search" />
+
+    <RecentSearches class="hero__recent" />
 
     <BackendStatus />
   </section>
@@ -59,6 +67,11 @@ import logoUrl from '@/assets/logo.svg'
   background: var(--gradient-brand);
   background-clip: text;
   color: transparent;
+}
+
+.hero__search,
+.hero__recent {
+  position: relative;
 }
 
 .hero__tagline {
