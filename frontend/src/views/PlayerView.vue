@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import PlayerHeader from '@/components/player/PlayerHeader.vue'
+import RankCards from '@/components/player/RankCards.vue'
 import { getPlayer } from '@/api/players'
 import { findPlatform } from '@/constants/platforms'
 import { useRecentSearches } from '@/composables/useRecentSearches'
@@ -94,7 +95,12 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
 
     <template v-else-if="player">
       <PlayerHeader :player="player" @refreshed="onRefreshed" />
-      <div class="player-page__content" :data-refresh-key="refreshKey" />
+      <div class="player-page__layout">
+        <aside class="player-page__aside">
+          <RankCards :ranks="player.ranks" />
+        </aside>
+        <div class="player-page__main" :data-refresh-key="refreshKey" />
+      </div>
     </template>
   </div>
 </template>
@@ -105,6 +111,26 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
   flex-direction: column;
   gap: 1.5rem;
   padding: 2rem 1.5rem 3rem;
+}
+
+.player-page__layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.player-page__aside,
+.player-page__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .player-page__layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
 }
 
 .player-page__skeleton-header {
