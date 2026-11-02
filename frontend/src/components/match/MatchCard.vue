@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import ChampionIcon from '@/components/game/ChampionIcon.vue'
 import ItemIcon from '@/components/game/ItemIcon.vue'
+import MatchDetail from '@/components/match/MatchDetail.vue'
 import RuneIcon from '@/components/game/RuneIcon.vue'
 import SpellIcon from '@/components/game/SpellIcon.vue'
 import { queueInfo } from '@/constants/queues'
@@ -21,6 +22,15 @@ const props = defineProps<{
 }>()
 
 const me = computed(() => props.match.player)
+
+/** Détail déplié ; chargé à la première ouverture, puis gardé pour ne pas le redemander. */
+const expanded = ref(false)
+const opened = ref(false)
+const detailId = useId()
+function toggle() {
+  expanded.value = !expanded.value
+  opened.value = true
+}
 const result = computed(() => {
   if (props.match.remake) return { key: 'remake', label: 'Remake' }
   return me.value.win ? { key: 'win', label: 'Victoire' } : { key: 'loss', label: 'Défaite' }
@@ -46,71 +56,90 @@ const teams = computed(() => {
     :aria-label="`${result.label} en ${queue.label}, ${me.championName}`"
     data-testid="match-card"
   >
-    <div class="match-card__info">
-      <p class="match-card__queue" :title="queue.label">{{ queue.short }}</p>
-      <p class="match-card__date">
-        <time :datetime="match.gameStart" :title="startDate">
-          {{ formatRelativeTime(match.gameStart, now) }}
-        </time>
-      </p>
-      <p class="match-card__result" data-testid="match-result">{{ result.label }}</p>
-      <p class="match-card__duration">{{ formatDuration(match.durationSeconds) }}</p>
-    </div>
-
-    <div class="match-card__loadout">
-      <ChampionIcon
-        :champion-id="me.championId"
-        :champion-name="me.championName"
-        :level="me.champLevel"
-        :size="48"
-      />
-      <div class="match-card__pair">
-        <SpellIcon v-for="(spell, i) in me.summonerSpells" :key="i" :spell-id="spell" />
+    <div class="match-card__row">
+      <div class="match-card__info">
+        <p class="match-card__queue" :title="queue.label">{{ queue.short }}</p>
+        <p class="match-card__date">
+          <time :datetime="match.gameStart" :title="startDate">
+            {{ formatRelativeTime(match.gameStart, now) }}
+          </time>
+        </p>
+        <p class="match-card__result" data-testid="match-result">{{ result.label }}</p>
+        <p class="match-card__duration">{{ formatDuration(match.durationSeconds) }}</p>
       </div>
-      <div class="match-card__pair">
-        <RuneIcon :rune-id="me.keystone" />
-        <RuneIcon :rune-id="me.secondaryStyle" :size="18" />
+
+      <div class="match-card__loadout">
+        <ChampionIcon
+          :champion-id="me.championId"
+          :champion-name="me.championName"
+          :level="me.champLevel"
+          :size="48"
+        />
+        <div class="match-card__pair">
+          <SpellIcon v-for="(spell, i) in me.summonerSpells" :key="i" :spell-id="spell" />
+        </div>
+        <div class="match-card__pair">
+          <RuneIcon :rune-id="me.keystone" />
+          <RuneIcon :rune-id="me.secondaryStyle" :size="18" />
+        </div>
       </div>
-    </div>
 
-    <div class="match-card__stats">
-      <p class="match-card__kda" data-testid="match-kda">
-        <!-- Espaces dans les <span> : entre deux balises, ils seraient supprimés à la compilation -->
-        <span>{{ me.kills }}</span
-        ><span class="match-card__slash"> / </span
-        ><span class="match-card__deaths">{{ me.deaths }}</span
-        ><span class="match-card__slash"> / </span><span>{{ me.assists }}</span>
-      </p>
-      <p class="match-card__ratio">{{ formatKdaRatio(me.kills, me.deaths, me.assists) }} KDA</p>
-      <p class="match-card__cs" data-testid="match-cs">
-        {{ me.cs }} CS ({{ formatNumber(csPerMinute, 1) }}/min)
-      </p>
-    </div>
+      <div class="match-card__stats">
+        <p class="match-card__kda" data-testid="match-kda">
+          <!-- Espaces dans les <span> : entre deux balises, ils seraient supprimés à la compilation -->
+          <span>{{ me.kills }}</span
+          ><span class="match-card__slash"> / </span
+          ><span class="match-card__deaths">{{ me.deaths }}</span
+          ><span class="match-card__slash"> / </span><span>{{ me.assists }}</span>
+        </p>
+        <p class="match-card__ratio">{{ formatKdaRatio(me.kills, me.deaths, me.assists) }} KDA</p>
+        <p class="match-card__cs" data-testid="match-cs">
+          {{ me.cs }} CS ({{ formatNumber(csPerMinute, 1) }}/min)
+        </p>
+      </div>
 
-    <div class="match-card__items" data-testid="match-items">
-      <ItemIcon v-for="(item, i) in me.items" :key="i" :item-id="item" :size="26" />
-    </div>
+      <div class="match-card__items" data-testid="match-items">
+        <ItemIcon v-for="(item, i) in me.items" :key="i" :item-id="item" :size="26" />
+      </div>
 
-    <div class="match-card__teams">
-      <ul v-for="(team, t) in teams" :key="t" class="match-card__team">
-        <li
-          v-for="p in team"
-          :key="p.puuid + p.championId"
-          class="match-card__player"
-          :class="{ 'match-card__player--me': p.puuid === me.puuid }"
-        >
-          <ChampionIcon :champion-id="p.championId" :champion-name="p.championName" :size="16" />
-          <RouterLink
-            v-if="p.gameName && p.tagLine"
-            :to="playerRoute(platform, { gameName: p.gameName, tagLine: p.tagLine })"
-            class="match-card__name"
-            :title="`${p.gameName}#${p.tagLine}`"
+      <div class="match-card__teams">
+        <ul v-for="(team, t) in teams" :key="t" class="match-card__team">
+          <li
+            v-for="p in team"
+            :key="p.puuid + p.championId"
+            class="match-card__player"
+            :class="{ 'match-card__player--me': p.puuid === me.puuid }"
           >
-            {{ p.gameName }}
-          </RouterLink>
-          <span v-else class="match-card__name match-card__name--unknown">Inconnu</span>
-        </li>
-      </ul>
+            <ChampionIcon :champion-id="p.championId" :champion-name="p.championName" :size="16" />
+            <RouterLink
+              v-if="p.gameName && p.tagLine"
+              :to="playerRoute(platform, { gameName: p.gameName, tagLine: p.tagLine })"
+              class="match-card__name"
+              :title="`${p.gameName}#${p.tagLine}`"
+            >
+              {{ p.gameName }}
+            </RouterLink>
+            <span v-else class="match-card__name match-card__name--unknown">Inconnu</span>
+          </li>
+        </ul>
+      </div>
+      <button
+        type="button"
+        class="match-card__toggle"
+        :aria-expanded="expanded"
+        :aria-controls="detailId"
+        :aria-label="
+          expanded ? 'Masquer le détail de la partie' : 'Afficher le détail de la partie'
+        "
+        data-testid="match-toggle"
+        @click="toggle"
+      >
+        <span class="match-card__chevron" aria-hidden="true">▾</span>
+      </button>
+    </div>
+
+    <div v-if="opened" v-show="expanded" :id="detailId" class="match-card__detail">
+      <MatchDetail :match-id="match.matchId" :platform="platform" :highlight-puuid="me.puuid" />
     </div>
   </article>
 </template>
@@ -119,11 +148,10 @@ const teams = computed(() => {
 .match-card {
   --result-color: var(--color-accent);
 
-  display: grid;
-  grid-template-columns: 5.5rem auto 7rem auto minmax(0, 1fr);
-  gap: 1rem;
-  align-items: center;
-  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
   border: 1px solid var(--color-border);
   border-left: 4px solid var(--result-color);
   border-radius: var(--radius);
@@ -132,6 +160,38 @@ const teams = computed(() => {
     color-mix(in srgb, var(--result-color) 12%, var(--color-surface)),
     var(--color-surface) 40%
   );
+}
+
+.match-card__row {
+  display: grid;
+  grid-template-columns: 5.5rem auto 7rem auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.match-card__toggle {
+  align-self: stretch;
+  width: 1.75rem;
+  border: none;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 4%);
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.match-card__toggle:hover {
+  background: rgb(255 255 255 / 9%);
+  color: var(--color-text);
+}
+
+.match-card__chevron {
+  display: inline-block;
+  transition: rotate 0.2s;
+}
+
+.match-card__toggle[aria-expanded='true'] .match-card__chevron {
+  rotate: 180deg;
 }
 
 .match-card--loss {
@@ -253,8 +313,8 @@ const teams = computed(() => {
 }
 
 @media (max-width: 1100px) {
-  .match-card {
-    grid-template-columns: 5.5rem auto 7rem auto;
+  .match-card__row {
+    grid-template-columns: 5.5rem auto 7rem auto auto;
   }
 
   .match-card__teams {
@@ -263,9 +323,15 @@ const teams = computed(() => {
 }
 
 @media (max-width: 600px) {
-  .match-card {
+  .match-card__row {
     grid-template-columns: auto 1fr;
     gap: 0.6rem 0.9rem;
+  }
+
+  .match-card__toggle {
+    grid-column: 1 / -1;
+    width: auto;
+    height: 1.6rem;
   }
 
   .match-card__info {
