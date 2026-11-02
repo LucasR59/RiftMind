@@ -1,7 +1,9 @@
 package com.riftmind.backend.dto;
 
 import java.time.Instant;
+import java.util.List;
 
+import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
 
 /**
@@ -14,6 +16,8 @@ import com.riftmind.backend.model.Player;
  * @param summonerLevel   niveau du compte
  * @param profileIconId   icône Data Dragon : {@code img/profileicon/{id}.png}
  * @param lastRefreshedAt dernière mise à jour des données depuis Riot
+ * @param ranks           rangs SoloQ puis Flex, uniquement pour les files où le joueur est classé. Liste vide (jamais
+ *                        {@code null}) si le joueur n'est pas classé
  */
 public record PlayerResponse(
         String puuid,
@@ -22,11 +26,13 @@ public record PlayerResponse(
         String platform,
         int summonerLevel,
         int profileIconId,
-        Instant lastRefreshedAt) {
+        Instant lastRefreshedAt,
+        List<LeagueEntryResponse> ranks) {
 
-    public static PlayerResponse from(Player player) {
+    /** @param ranks rangs du joueur, déjà dans l'ordre d'affichage (voir {@code LeagueService#findByPuuid}) */
+    public static PlayerResponse from(Player player, List<LeagueEntry> ranks) {
         return new PlayerResponse(player.getPuuid(), player.getGameName(), player.getTagLine(),
                 player.getPlatform().id(), player.getSummonerLevel(), player.getProfileIconId(),
-                player.getLastRefreshedAt());
+                player.getLastRefreshedAt(), ranks.stream().map(LeagueEntryResponse::from).toList());
     }
 }

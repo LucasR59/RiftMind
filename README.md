@@ -160,14 +160,16 @@ Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur l
 | Méthode et URL | Rôle |
 |---|---|
 | `GET /api/ping` | Vérifie que l'API répond |
-| `GET /api/players/{platform}/{gameName}/{tagLine}` | Joueur par Riot ID. Cherché en base, sinon récupéré chez Riot et enregistré |
+| `GET /api/players/{platform}/{gameName}/{tagLine}` | Joueur par Riot ID, avec ses rangs SoloQ et Flex. Cherché en base, sinon récupéré chez Riot et enregistré |
 
 - `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.
 - `gameName` et `tagLine` sont encodés dans l'URL (`%20` pour un espace), et la casse est ignorée.
+- `ranks` contient la SoloQ puis la Flex, seulement pour les files où le joueur est classé : liste vide s'il ne l'est pas.
 
 ```bash
 curl http://localhost:8080/api/players/euw1/Joueur%20Test/EUW   # remplacer par un vrai Riot ID
-# {"puuid":"…","gameName":"Joueur Test","tagLine":"EUW","platform":"euw1","summonerLevel":512,"profileIconId":7,"lastRefreshedAt":"2026-11-01T20:00:00Z"}
+# {"puuid":"…","gameName":"Joueur Test","tagLine":"EUW","platform":"euw1","summonerLevel":512,"profileIconId":7,"lastRefreshedAt":"2026-11-01T20:00:00Z",
+#  "ranks":[{"queueType":"RANKED_SOLO_5x5","tier":"CHALLENGER","rank":"I","leaguePoints":1234,"wins":250,"losses":200,"hotStreak":false}]}
 ```
 
 ## Erreurs renvoyées par l'API RiftMind
