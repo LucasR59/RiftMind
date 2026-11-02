@@ -86,7 +86,7 @@ et **ses winrates par champion**.
 
 ## Phase 6 — Front : fondations
 - [x] **6.1** Types TS miroirs des DTO dans `src/types/` (Player, LeagueEntry, MatchSummary, ChampionStats…). → `src/types/` : `api.ts` (erreurs `ProblemDetail` et `ErrorCode`), `player.ts` (`Player`, `LeagueEntry`), `match.ts` (`MatchSummary`, `MatchPage`, `MatchDetail`, `Participant`…), `stats.ts` (`ChampionStats`, `PlayerSummary`). Dates en chaînes ISO 8601, comme dans le JSON.
-- [ ] **6.2** Ajouter `apiPost` dans `src/api/http.ts`, puis créer `src/api/players.ts` et `src/api/matches.ts`. ✅ Fini quand : des tests unitaires passent avec `fetch` mocké.
+- [x] **6.2** Ajouter `apiPost` dans `src/api/http.ts`, puis créer `src/api/players.ts` et `src/api/matches.ts`. ✅ Fini quand : des tests unitaires passent avec `fetch` mocké. → `ApiError` porte maintenant le corps RFC 9457 (`problem`, `code`, `retryAfterSeconds`), et une erreur réseau devient une `ApiError` de statut 0. `segment()` encode les segments d'URL (Riot ID), `query()` construit la chaîne de requête. Réponses de test dans `tests/fixtures/api.ts`.
 - [ ] **6.3** Créer un store Pinia `staticData` pour Data Dragon : dernière version, champions (id → nom/image), objets, sorts, runes, files de jeu. Mis en cache dans `localStorage` par version, avec des fonctions utilitaires pour construire les URLs d'images.
 - [ ] **6.4** Créer `src/constants/platforms.ts` (miroir de l'enum du back) et un composant `PlatformSelect`.
 - [ ] **6.5** Ajouter la route `/:platform/:riotId` au format `/euw1/Nom-TAG`. Les noms contenant des caractères spéciaux doivent fonctionner (encodage des URLs).
