@@ -57,10 +57,11 @@ et **ses winrates par champion**.
 
 ## Phase 4 — Back : récupération et stockage des matchs
 - [x] **4.1** Créer les DTO Match-V5 (`MatchDto`, `InfoDto`, `ParticipantDto`), limités aux champs utiles. → `ParticipantDto` calcule `cs()`, `items()` (7 cases, balise en dernier), `summonerSpells()`, `keystone()` et `secondaryStyle()`. `InfoDto.durationSeconds()` gère l'ancien format en ms (avant le patch 11.20). Les Augments Arena ne sont pas lus.
-- [ ] **4.2** Migration `V4__match.sql` : tables `match` et `match_participant`.
+- [x] **4.2** Migration `V4__match.sql` : tables `match` et `match_participant`.
   - `match` : `match_id` (clé primaire), `platform`, `queue_id`, `game_version`, `game_start`, `duration_s`, `remake`, et `raw jsonb` (réponse brute gardée pour les besoins futurs).
   - `match_participant` : `match_id`, `puuid`, `team_id`, `champion_id`, `champion_name`, `position`, `win`, `kills`, `deaths`, `assists`, `cs`, `gold`, `damage_champions`, `vision_score`, `items int[]`, `summoner_spells int[]`, `keystone`, `secondary_style`.
   - Index : (`puuid`, `game_start desc`) et (`puuid`, `champion_id`).
+  - → Clé de `match_participant` : (`match_id`, `participant_id`), car le PUUID n'est pas unique dans une partie (bots). Colonnes ajoutées : `game_name`, `tag_line`, `champ_level` (liste compacte des participants), `created_at` sur `match`. `game_start` et `queue_id` sont recopiés dans `match_participant` pour que l'historique se lise avec un seul index. `match.platform` sans contrainte (anciennes plateformes PH2/TH2). `raw` facultatif (4.6). Supprimer un match supprime ses participants.
 - [ ] **4.3** Créer les entités et repositories `Match` et `MatchParticipant`.
 - [ ] **4.4** Créer `MatchIngestionService.syncRecent(puuid, count=20)` :
   - récupérer les identifiants des derniers matchs ;
