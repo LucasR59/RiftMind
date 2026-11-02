@@ -5,9 +5,11 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -22,7 +24,7 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Lecture des réponses Riot en DTO (tâche 2.1), via le vrai chemin : {@link RiotClient} et ses convertisseurs JSON.
+ * Lecture des réponses Riot en DTO (tâches 2.1 et 3.2), via le vrai chemin : {@link RiotClient} et ses convertisseurs JSON.
  * {@code RestClient.builder()} utilise la configuration Jackson par défaut, et non celle de l'application.
  */
 class RiotDtoTest {
@@ -31,6 +33,8 @@ class RiotDtoTest {
             "https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Joueur%20Test/EUW";
     private static final String SUMMONER_URL =
             "https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/" + RiotFixtures.PUUID;
+    private static final String LEAGUE_URL =
+            "https://euw1.api.riotgames.com/lol/league/v4/entries/by-puuid/" + RiotFixtures.PUUID;
 
     private MockRestServiceServer server;
     private RiotClient client;
@@ -90,6 +94,29 @@ class RiotDtoTest {
         server.verify();
     }
 
+    private List<LeagueEntryDto> fetchLeagueEntries(String fixture) {
+        server.expect(requestTo(LEAGUE_URL))
+                .andRespond(withSuccess(RiotFixtures.read(fixture), MediaType.APPLICATION_JSON));
+        return client.get(Platform.EUW1, "/lol/league/v4/entries/by-puuid/{puuid}",
+                new ParameterizedTypeReference<List<LeagueEntryDto>>() {
+                }, RiotFixtures.PUUID);
+    }
+
+    @Test
+    void litLesRangsDUnJoueurClasse() {
+        // league-entries.json contient aussi leagueId, veteran, inactive, freshBlood, absents du DTO
+        List<LeagueEntryDto> entries = fetchLeagueEntries(RiotFixtures.LEAGUE_ENTRIES);
+
+        assertThat(entries).containsExactly(
+                new LeagueEntryDto("RANKED_SOLO_5x5", "CHALLENGER", "I", 1234, 250, 200, false));
+        server.verify();
+    }
+
+    @Test
+    void unJoueurNonClasseDonneUneListeVide() {
+        assertThat(fetchLeagueEntries(RiotFixtures.LEAGUE_ENTRIES_UNRANKED)).isEmpty();
+    }
+
     /**
      * Jackson 3 ignore déjà les champs inconnus par défaut. {@code @JsonIgnoreProperties} garantit que les DTO
      * restent lisibles même si la configuration devient stricte
@@ -105,5 +132,7 @@ class RiotDtoTest {
                 .isEqualTo(512);
         assertThat(strict.readValue("{\"puuid\": \"p\", \"nouveauChamp\": 1}", AccountDto.class).puuid())
                 .isEqualTo("p");
+        assertThat(strict.readValue(RiotFixtures.read(RiotFixtures.LEAGUE_ENTRIES), LeagueEntryDto[].class))
+                .extracting(LeagueEntryDto::tier).containsExactly("CHALLENGER");
     }
 }

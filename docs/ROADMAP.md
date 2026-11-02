@@ -52,7 +52,7 @@ et **ses winrates par champion**.
   - Colonnes : `puuid`, `queue_type`, `tier`, `rank`, `league_points`, `wins`, `losses`, `hot_streak`, `updated_at`.
   - Clé primaire : (`puuid`, `queue_type`).
   - → `puuid` référence `player` avec `ON DELETE CASCADE` (utile pour 5.8). `queue_type` = nom de l'enum `RankedQueue` (`RANKED_SOLO_5x5`, `RANKED_FLEX_SR`), limité par une contrainte. `tier` et `rank` sans contrainte, pour ne pas casser si Riot ajoute un palier.
-- [ ] **3.2** Créer `LeagueService` : appelle League-V4 (`entries/by-puuid`) et met à jour les rangs en base (insertion ou mise à jour).
+- [x] **3.2** Créer `LeagueService` : appelle League-V4 (`entries/by-puuid`) et met à jour les rangs en base (insertion ou mise à jour). → `fetch` (Riot, sans transaction) et `save` (base, une seule transaction) sont séparés, `refresh(player)` enchaîne les deux. Une file absente de la réponse est supprimée, les files autres que SoloQ/Flex sont ignorées. `findByPuuid` trie SoloQ puis Flex.
 - [ ] **3.3** Ajouter les rangs SoloQ et Flex à `PlayerResponse`. ✅ Fini quand : un joueur non classé renvoie une liste vide, sans erreur.
 
 ## Phase 4 — Back : récupération et stockage des matchs
