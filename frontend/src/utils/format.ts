@@ -47,9 +47,16 @@ export function formatCountdown(totalSeconds: number): string {
   return seconds < MINUTE ? `${seconds} s` : formatDuration(seconds)
 }
 
-/** Nombre avec séparateur de milliers et décimales à la française, ex. « 13 852 », « 3,5 ». */
-export function formatNumber(value: number, maximumFractionDigits = 0): string {
-  return value.toLocaleString(LOCALE, { maximumFractionDigits })
+/**
+ * Nombre avec séparateur de milliers et décimales à la française, ex. « 13 852 », « 3,5 ».
+ * `minimumFractionDigits` garde les zéros, ex. « 3,20 » pour un KDA.
+ */
+export function formatNumber(
+  value: number,
+  maximumFractionDigits = 0,
+  minimumFractionDigits = 0,
+): string {
+  return value.toLocaleString(LOCALE, { minimumFractionDigits, maximumFractionDigits })
 }
 
 /** Grand nombre abrégé, ex. « 13,9 k ». */

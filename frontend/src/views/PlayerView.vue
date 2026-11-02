@@ -7,6 +7,7 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import PlayerHeader from '@/components/player/PlayerHeader.vue'
 import RankCards from '@/components/player/RankCards.vue'
 import MatchHistory from '@/components/match/MatchHistory.vue'
+import ChampionStatsTable from '@/components/player/ChampionStatsTable.vue'
 import { getPlayer } from '@/api/players'
 import { findPlatform } from '@/constants/platforms'
 import { useRecentSearches } from '@/composables/useRecentSearches'
@@ -27,6 +28,14 @@ const loading = ref(false)
 const error = ref<unknown>(null)
 /** Incrémenté à chaque mise à jour du joueur : les blocs (parties, stats…) rechargent leurs données. */
 const refreshKey = ref(0)
+
+/** Onglet affiché ; l'onglet « Champions » n'est chargé qu'à sa première ouverture. */
+const tab = ref<'matches' | 'champions'>('matches')
+const championsOpened = ref(false)
+function selectTab(name: 'matches' | 'champions') {
+  tab.value = name
+  if (name === 'champions') championsOpened.value = true
+}
 
 const platform = computed(() => findPlatform(String(route.params.platform)))
 const riotId = computed(() => fromRiotIdSlug(String(route.params.riotId)))
@@ -101,11 +110,54 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
           <RankCards :ranks="player.ranks" />
         </aside>
         <div class="player-page__main">
-          <MatchHistory
-            :puuid="player.puuid"
-            :platform="player.platform"
-            :refresh-key="refreshKey"
-          />
+          <div class="player-page__tabs" role="tablist" aria-label="Contenu du profil">
+            <button
+              id="tab-matches"
+              type="button"
+              role="tab"
+              class="player-page__tab"
+              :aria-selected="tab === 'matches'"
+              aria-controls="panel-matches"
+              data-testid="tab-matches"
+              @click="selectTab('matches')"
+            >
+              Parties
+            </button>
+            <button
+              id="tab-champions"
+              type="button"
+              role="tab"
+              class="player-page__tab"
+              :aria-selected="tab === 'champions'"
+              aria-controls="panel-champions"
+              data-testid="tab-champions"
+              @click="selectTab('champions')"
+            >
+              Champions
+            </button>
+          </div>
+
+          <div
+            v-show="tab === 'matches'"
+            id="panel-matches"
+            role="tabpanel"
+            aria-labelledby="tab-matches"
+          >
+            <MatchHistory
+              :puuid="player.puuid"
+              :platform="player.platform"
+              :refresh-key="refreshKey"
+            />
+          </div>
+          <div
+            v-if="championsOpened"
+            v-show="tab === 'champions'"
+            id="panel-champions"
+            role="tabpanel"
+            aria-labelledby="tab-champions"
+          >
+            <ChampionStatsTable :puuid="player.puuid" :refresh-key="refreshKey" />
+          </div>
         </div>
       </div>
     </template>
@@ -138,6 +190,33 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
   .player-page__layout {
     grid-template-columns: 300px minmax(0, 1fr);
   }
+}
+
+.player-page__tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.player-page__tab {
+  margin-bottom: -1px;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-page__tab:hover {
+  color: var(--color-text);
+}
+
+.player-page__tab[aria-selected='true'] {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .player-page__skeleton-header {
