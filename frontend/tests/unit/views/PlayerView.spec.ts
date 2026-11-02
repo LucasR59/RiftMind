@@ -61,22 +61,38 @@ describe('PlayerView', () => {
     expect(getPlayer).toHaveBeenCalledTimes(1)
   })
 
-  it('affiche une erreur avec le message du backend, et permet de réessayer', async () => {
+  it('affiche « Joueur introuvable » avec le message du backend et la recherche', async () => {
     vi.mocked(getPlayer).mockRejectedValueOnce(
       new ApiError(404, 'Aucun joueur « Inconnu#EUW » sur EUW (Europe Ouest).', {
         status: 404,
         code: 'NOT_FOUND',
+        detail: 'Aucun joueur « Inconnu#EUW » sur EUW (Europe Ouest).',
       }),
     )
 
     const { wrapper } = await mountAt('/euw1/Inconnu-EUW')
 
     const error = wrapper.find('[data-testid="error-state"]')
+    expect(error.find('.error-state__title').text()).toBe('Joueur introuvable')
     expect(error.text()).toContain('Aucun joueur « Inconnu#EUW » sur EUW (Europe Ouest).')
+    // Pas de « Réessayer » (le même Riot ID donnerait la même réponse) mais la recherche pour corriger
+    expect(error.find('button.error-state__retry').exists()).toBe(false)
+    expect(error.find('form[role="search"]').exists()).toBe(true)
     expect(useRecentSearches().items.value).toEqual([])
+  })
+
+  it('permet de réessayer quand les serveurs Riot sont indisponibles', async () => {
+    vi.mocked(getPlayer).mockRejectedValueOnce(
+      new ApiError(503, 'indisponible', { status: 503, code: 'RIOT_UNAVAILABLE' }),
+    )
+    const { wrapper } = await mountAt('/euw1/Joueur%20Test-EUW')
+
+    const error = wrapper.find('[data-testid="error-state"]')
+    expect(error.find('.error-state__title').text()).toBe('Serveurs Riot indisponibles')
+    expect(error.find('form[role="search"]').exists()).toBe(false)
 
     vi.mocked(getPlayer).mockResolvedValue(player)
-    await error.find('button').trigger('click')
+    await error.find('button.error-state__retry').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="player-riot-id"]').exists()).toBe(true)
   })

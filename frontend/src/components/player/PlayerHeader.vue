@@ -8,6 +8,7 @@ import { findPlatform } from '@/constants/platforms'
 import { useNow } from '@/composables/useNow'
 import { useStaticDataStore } from '@/stores/staticData'
 import type { Player } from '@/types/player'
+import { describeError } from '@/utils/errors'
 import { formatCountdown, formatRelativeTime } from '@/utils/format'
 
 /**
@@ -51,10 +52,7 @@ async function refresh() {
     if (e instanceof ApiError && e.code === 'REFRESH_COOLDOWN') {
       serverReadyAt.value = Date.now() + (e.retryAfterSeconds ?? REFRESH_COOLDOWN_SECONDS) * 1000
     } else {
-      refreshError.value =
-        e instanceof ApiError && e.status !== 0
-          ? 'La mise à jour a échoué : les serveurs Riot ne répondent pas. Réessayez dans un instant.'
-          : 'La mise à jour a échoué : impossible de joindre RiftMind. Vérifiez votre connexion.'
+      refreshError.value = `La mise à jour a échoué. ${describeError(e, 'Joueur').message}`
     }
   } finally {
     refreshing.value = false

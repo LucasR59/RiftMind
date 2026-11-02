@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import ChampionIcon from '@/components/game/ChampionIcon.vue'
-import ErrorState from '@/components/ui/ErrorState.vue'
+import ApiErrorState from '@/components/ui/ApiErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import { getChampionStats } from '@/api/players'
 import { RANKED_FLEX_QUEUE, RANKED_SOLO_QUEUE } from '@/constants/queues'
@@ -106,11 +106,10 @@ const ariaSort = (key: SortKey) =>
 
     <LoadingSkeleton v-if="loading" :lines="5" height="2rem" />
 
-    <ErrorState
+    <ApiErrorState
       v-else-if="error"
+      :error="error"
       title="Statistiques indisponibles"
-      message="Les statistiques par champion n'ont pas pu être chargées."
-      retryable
       @retry="load"
     />
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-import ErrorState from '@/components/ui/ErrorState.vue'
+import ApiErrorState from '@/components/ui/ApiErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import { getPlayerSummary } from '@/api/players'
 import type { PlayerSummary, RoleShare } from '@/types/stats'
@@ -51,7 +51,7 @@ const roleShare = (role: RoleShare) =>
 
     <LoadingSkeleton v-if="loading" :lines="4" />
 
-    <ErrorState v-else-if="error" title="Résumé indisponible" retryable @retry="load" />
+    <ApiErrorState v-else-if="error" :error="error" title="Résumé indisponible" @retry="load" />
 
     <p v-else-if="!summary?.games" class="summary__empty" data-testid="summary-empty">
       Aucune partie récente.

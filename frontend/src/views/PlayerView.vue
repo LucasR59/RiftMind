@@ -2,9 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import ErrorState from '@/components/ui/ErrorState.vue'
+import ApiErrorState from '@/components/ui/ApiErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import PlayerHeader from '@/components/player/PlayerHeader.vue'
+import PlayerSearch from '@/components/PlayerSearch.vue'
 import RankCards from '@/components/player/RankCards.vue'
 import RecentSummary from '@/components/player/RecentSummary.vue'
 import MatchHistory from '@/components/match/MatchHistory.vue'
@@ -82,8 +83,6 @@ function onRefreshed(updated: Player) {
 }
 
 watch(() => [route.params.platform, route.params.riotId], load, { immediate: true })
-
-const errorMessage = computed(() => (error.value instanceof Error ? error.value.message : null))
 </script>
 
 <template>
@@ -96,13 +95,16 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
       </div>
     </div>
 
-    <ErrorState
-      v-else-if="error"
-      title="Profil indisponible"
-      :message="errorMessage"
-      retryable
-      @retry="load"
-    />
+    <ApiErrorState v-else-if="error" :error="error" subject="Joueur" @retry="load">
+      <template #default="{ kind }">
+        <!-- Joueur introuvable : proposer de corriger la recherche sur place -->
+        <PlayerSearch
+          v-if="kind === 'not-found' || kind === 'invalid'"
+          compact
+          class="player-page__search"
+        />
+      </template>
+    </ApiErrorState>
 
     <template v-else-if="player">
       <PlayerHeader :player="player" @refreshed="onRefreshed" />
@@ -192,6 +194,10 @@ const errorMessage = computed(() => (error.value instanceof Error ? error.value.
   .player-page__layout {
     grid-template-columns: 300px minmax(0, 1fr);
   }
+}
+
+.player-page__search {
+  margin-top: 0.5rem;
 }
 
 .player-page__tabs {
