@@ -16,6 +16,7 @@ import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
 import com.riftmind.backend.dto.ParticipantResponse;
+import com.riftmind.backend.dto.PlayerSummaryResponse;
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.MatchNotFoundException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
@@ -37,6 +38,8 @@ public class MatchQueryService {
     public static final int DEFAULT_PAGE_SIZE = 10;
     /** Taille de page maximale de l'historique. */
     public static final int MAX_PAGE_SIZE = 50;
+    /** Nombre de parties prises en compte par le résumé. */
+    public static final int SUMMARY_GAMES = 20;
 
     private final PlayerRepository playerRepository;
     private final MatchRepository matchRepository;
@@ -124,6 +127,17 @@ public class MatchQueryService {
         return participantRepository.findChampionStats(puuid, queueId).stream()
                 .map(ChampionStatsResponse::from)
                 .toList();
+    }
+
+    /**
+     * Résumé des {@value #SUMMARY_GAMES} dernières parties du joueur, hors remakes (tâche 5.4) : winrate, KDA, rôles.
+     *
+     * @throws PlayerNotFoundException si aucun joueur n'a ce PUUID
+     */
+    public PlayerSummaryResponse getSummary(String puuid) {
+        requireKnownPlayer(puuid);
+        return PlayerSummaryResponse.of(
+                participantRepository.findRecentWithoutRemakes(puuid, PageRequest.of(0, SUMMARY_GAMES)));
     }
 
     private static MatchSummaryResponse summary(MatchHeader header, MatchParticipant me,

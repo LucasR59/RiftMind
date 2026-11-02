@@ -50,4 +50,12 @@ public interface MatchParticipantRepository extends JpaRepository<MatchParticipa
             order by count(p) desc, max(p.championName)
             """)
     List<ChampionStatsRow> findChampionStats(String puuid, Integer queueId);
+
+    /** Dernières participations du joueur hors remakes, de la plus récente à la plus ancienne (toutes files). */
+    @Query("""
+            select p from MatchParticipant p join Match m on m.matchId = p.matchId
+            where p.puuid = :puuid and m.remake = false
+            order by p.gameStart desc, p.matchId desc
+            """)
+    List<MatchParticipant> findRecentWithoutRemakes(String puuid, Pageable pageable);
 }

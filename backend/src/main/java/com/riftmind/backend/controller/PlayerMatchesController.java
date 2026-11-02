@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.riftmind.backend.dto.ChampionStatsResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
+import com.riftmind.backend.dto.PlayerSummaryResponse;
 import com.riftmind.backend.service.MatchQueryService;
 
 /**
@@ -51,5 +52,11 @@ public class PlayerMatchesController {
     public List<ChampionStatsResponse> getChampionStats(@PathVariable String puuid,
             @RequestParam(required = false) Integer queue) {
         return matchQueryService.getChampionStats(puuid, queue);
+    }
+
+    /** Résumé des 20 dernières parties, hors remakes : winrate, KDA moyen, rôles joués. */
+    @GetMapping("/summary")
+    public PlayerSummaryResponse getSummary(@PathVariable String puuid) {
+        return matchQueryService.getSummary(puuid);
     }
 }
