@@ -4,9 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import com.riftmind.backend.model.MatchParticipant;
 import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotFixtures;
@@ -25,7 +30,7 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Lecture des réponses Riot en DTO (tâches 2.1, 3.2 et 4.1), via le vrai chemin : {@link RiotClient} et ses convertisseurs JSON.
+ * Lecture des réponses Riot en DTO (tâches 2.1, 3.2, 4.1, 4.5 et 4.6), via le vrai chemin : {@link RiotClient} et ses convertisseurs JSON.
  * {@code RestClient.builder()} utilise la configuration Jackson par défaut, et non celle de l'application.
  */
 class RiotDtoTest {
@@ -217,6 +222,15 @@ class RiotDtoTest {
     @Test
     void unePartieSansParticipantNEstPasUnRemake() {
         assertThat(new InfoDto(0, 0, 1L, 0, "16.21", 420, "EUW1", "CLASSIC", 11, null).isRemake()).isFalse();
+    }
+
+    /** Tâche 4.6 : Riot interdit d'afficher des stats d'Augments Arena, on ne les lit donc même pas. */
+    @Test
+    void aucunAugmentArenaNEstLuNiStocke() {
+        assertThat(Arrays.stream(ParticipantDto.class.getRecordComponents()).map(RecordComponent::getName))
+                .noneMatch(name -> name.toLowerCase(Locale.ROOT).contains("augment"));
+        assertThat(Arrays.stream(MatchParticipant.class.getDeclaredFields()).map(Field::getName))
+                .noneMatch(name -> name.toLowerCase(Locale.ROOT).contains("augment"));
     }
 
     @Test

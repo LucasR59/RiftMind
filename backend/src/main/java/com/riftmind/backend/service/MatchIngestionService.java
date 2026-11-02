@@ -38,6 +38,14 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Une partie terminée ne change jamais : elle n'est demandée à Riot qu'une seule fois. Une synchronisation coûte
  * donc 1 appel (la liste des derniers identifiants), plus 1 appel par partie pas encore en base.
  *
+ * <p>Règles d'affichage de Riot (tâche 4.6) :
+ * <ul>
+ *   <li>une partie personnalisée est enregistrée comme simple marqueur (identifiant, file, date), sans réponse brute
+ *       ni joueurs : elle n'apparaît donc ni dans l'historique ni dans les statistiques, qui lisent
+ *       {@code match_participant}, et n'est pas redemandée à Riot à chaque synchronisation ;</li>
+ *   <li>les Augments d'Arena ne sont pas lus ({@link com.riftmind.backend.riot.dto.ParticipantDto}).</li>
+ * </ul>
+ *
  * <p>Comme {@link PlayerService}, aucune transaction n'est ouverte pendant les appels à Riot : toutes les parties sont
  * d'abord récupérées, puis enregistrées ensemble dans une seule transaction.
  */
@@ -50,6 +58,11 @@ public class MatchIngestionService {
     static final String MATCH_BY_ID = "/lol/match/v5/matches/{matchId}";
     /** Nombre de parties récupérées par défaut. */
     public static final int DEFAULT_COUNT = 20;
+    /**
+     * File des parties personnalisées. Riot interdit d'afficher leur historique sans l'accord du joueur
+     * (docs/riot-api.md §4, tâche 4.6).
+     */
+    static final int CUSTOM_GAME_QUEUE = 0;
     /** Maximum accepté par Match-V5 pour {@code count}. */
     static final int MAX_COUNT = 100;
     private static final ParameterizedTypeReference<List<String>> ID_LIST = new ParameterizedTypeReference<>() {
@@ -78,7 +91,8 @@ public class MatchIngestionService {
      *
      * @param listed       identifiants renvoyés par Riot
      * @param alreadyKnown parties déjà en base, non redemandées à Riot
-     * @param saved        parties récupérées et enregistrées par cet appel
+     * @param saved        parties récupérées et enregistrées par cet appel, parties personnalisées comprises (sans
+     *                     leur contenu)
      */
     public record SyncResult(int listed, int alreadyKnown, int saved) {
     }
@@ -163,9 +177,11 @@ public class MatchIngestionService {
             return null;
         }
         InfoDto info = dto.info();
-        Match match = new Match(matchId, platformOf(matchId, info), info.queueId(),
-                Objects.requireNonNullElse(info.gameVersion(), ""),
-                info.gameStart(), Math.toIntExact(info.durationSeconds()), info.isRemake(), raw, now());
+        if (info.queueId() == CUSTOM_GAME_QUEUE) {
+            log.debug("Match {} : partie personnalisée, enregistrée sans son contenu", matchId);
+            return new FetchedMatch(newMatch(matchId, info, null), List.of());
+        }
+        Match match = newMatch(matchId, info, raw);
         List<MatchParticipant> participants = info.participants().stream()
                 .map(p -> MatchParticipant.of(match, p))
                 .toList();
@@ -209,6 +225,12 @@ public class MatchIngestionService {
             participantRepository.flush();
         });
         return fetched.size();
+    }
+
+    private Match newMatch(String matchId, InfoDto info, String raw) {
+        return new Match(matchId, platformOf(matchId, info), info.queueId(),
+                Objects.requireNonNullElse(info.gameVersion(), ""), info.gameStart(),
+                Math.toIntExact(info.durationSeconds()), info.isRemake(), raw, now());
     }
 
     /** {@code info.platformId}, ou à défaut le préfixe de l'identifiant ({@code EUW1} pour {@code EUW1_123}). */
