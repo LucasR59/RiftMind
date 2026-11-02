@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
 import com.riftmind.backend.TestcontainersConfiguration;
+import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.PlayerRepository;
@@ -99,6 +100,19 @@ class PlayerServiceTest {
         assertThat(player.getProfileIconId()).isEqualTo(7);
         assertThat(player.getLastRefreshedAt()).isEqualTo(NOW);
         assertThat(repository.findById(RiotFixtures.PUUID)).isPresent();
+    }
+
+    /** Vu en direct : la 1ʳᵉ réponse avait des nanosecondes, la suivante (relue en base) des microsecondes. */
+    @Test
+    void laDateDeMiseAJourRenvoyeeEstCelleStockeeEnBase() {
+        Instant withNanos = Instant.parse("2026-11-01T23:22:34.164986960Z");
+        service = new PlayerService(riotClient, repository, Clock.fixed(withNanos, ZoneOffset.UTC));
+        riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+
+        Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        assertThat(player.getLastRefreshedAt()).isEqualTo(Instant.parse("2026-11-01T23:22:34.164986Z"))
+                .isEqualTo(repository.findById(RiotFixtures.PUUID).orElseThrow().getLastRefreshedAt());
     }
 
     @Test
@@ -185,9 +199,9 @@ class PlayerServiceTest {
     @Test
     void uneSaisieVideEstRefuseeSansAppelerRiot() {
         assertThatThrownBy(() -> service.getOrFetch(Platform.EUW1, "  ", "EUW"))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("gameName");
+                .isInstanceOf(InvalidRequestException.class).hasMessage("Le nom du Riot ID ne doit pas être vide.");
         assertThatThrownBy(() -> service.getOrFetch(Platform.EUW1, "Joueur Test", null))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("tagLine");
+                .isInstanceOf(InvalidRequestException.class).hasMessage("Le tag du Riot ID ne doit pas être vide.");
         riot.verify();
     }
 

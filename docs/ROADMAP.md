@@ -45,12 +45,13 @@ et **ses winrates par champion**.
   - → Un seul index composé `(platform, lower(game_name), lower(tag_line))`, non unique : un Riot ID libéré puis repris peut rester sur deux lignes jusqu'au rafraîchissement. `platform` = nom de l'enum (`EUW1`), limité aux 15 plateformes par une contrainte.
 - [x] **2.3** Créer l'entité `Player` (`model/`) et `PlayerRepository` (`repository/`). ✅ Fini quand : un test de repository passe avec Testcontainers. → Recherche avec `findByRiotId(platform, gameName, tagLine)` : insensible à la casse, et le plus récemment rafraîchi gagne. Mise à jour avec `Player.refresh(...)`.
 - [x] **2.4** Créer `PlayerService.getOrFetch(platform, gameName, tagLine)` : renvoie le joueur depuis la base s'il y est, sinon appelle Account-V1 puis Summoner-V4 et l'enregistre. ✅ Fini quand : les tests du service passent avec un `RiotClient` mocké. → Garde l'écriture exacte du Riot ID renvoyée par Riot. Met à jour la ligne existante si le PUUID est déjà connu sous un autre nom. Distingue « Riot ID inconnu » et « pas de profil LoL sur cette plateforme ». Pas de transaction pendant les appels à Riot.
-- [ ] **2.5** Exposer `GET /api/players/{platform}/{gameName}/{tagLine}` → `PlayerResponse` (404 en `ProblemDetail` si le joueur n'existe pas). ✅ Fini quand : test `@WebMvcTest` + un appel curl réel sur EUW.
+- [x] **2.5** Exposer `GET /api/players/{platform}/{gameName}/{tagLine}` → `PlayerResponse` (404 en `ProblemDetail` si le joueur n'existe pas). ✅ Fini quand : test `@WebMvcTest` + un appel curl réel sur EUW. → `platform` accepte `euw1` ou `EUW`, une valeur inconnue donne une 400 `INVALID_REQUEST`. Vérifié en direct : un vrai Challenger EUW (200, puis servi depuis la base sans appeler Riot), un Riot ID inexistant (404) et un compte sans profil sur KR (404).
 
 ## Phase 3 — Back : rang
-- [ ] **3.1** Migration `V3__league_entry.sql` : table `league_entry`.
+- [x] **3.1** Migration `V3__league_entry.sql` : table `league_entry`.
   - Colonnes : `puuid`, `queue_type`, `tier`, `rank`, `league_points`, `wins`, `losses`, `hot_streak`, `updated_at`.
   - Clé primaire : (`puuid`, `queue_type`).
+  - → `puuid` référence `player` avec `ON DELETE CASCADE` (utile pour 5.8). `queue_type` = nom de l'enum `RankedQueue` (`RANKED_SOLO_5x5`, `RANKED_FLEX_SR`), limité par une contrainte. `tier` et `rank` sans contrainte, pour ne pas casser si Riot ajoute un palier.
 - [ ] **3.2** Créer `LeagueService` : appelle League-V4 (`entries/by-puuid`) et met à jour les rangs en base (insertion ou mise à jour).
 - [ ] **3.3** Ajouter les rangs SoloQ et Flex à `PlayerResponse`. ✅ Fini quand : un joueur non classé renvoie une liste vide, sans erreur.
 

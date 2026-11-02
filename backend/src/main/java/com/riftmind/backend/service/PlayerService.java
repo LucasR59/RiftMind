@@ -2,6 +2,7 @@ package com.riftmind.backend.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.PlayerRepository;
@@ -59,12 +61,12 @@ public class PlayerService {
      *
      * @throws PlayerNotFoundException                    si le Riot ID n'existe pas, ou s'il n'a pas de profil League
      *                                                    of Legends sur cette plateforme
-     * @throws IllegalArgumentException                   si le nom ou le tag est vide
+     * @throws InvalidRequestException                    si le nom ou le tag est vide
      * @throws com.riftmind.backend.riot.RiotApiException si Riot est indisponible ou refuse l'appel
      */
     public Player getOrFetch(Platform platform, String gameName, String tagLine) {
-        String name = requireNotBlank(gameName, "gameName");
-        String tag = requireNotBlank(tagLine, "tagLine");
+        String name = requireNotBlank(gameName, "nom");
+        String tag = requireNotBlank(tagLine, "tag");
 
         Optional<Player> known = playerRepository.findByRiotId(platform, name, tag);
         if (known.isPresent()) {
@@ -95,7 +97,8 @@ public class PlayerService {
     }
 
     private Player save(Platform platform, AccountDto account, SummonerDto summoner, String name, String tag) {
-        Instant now = clock.instant();
+        // PostgreSQL stocke les dates à la microseconde : on tronque pour renvoyer la même valeur qu'à la relecture
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         // Riot renvoie l'écriture exacte du Riot ID. Repli sur la saisie si le compte n'en a pas.
         String gameName = displayName(account.gameName(), name);
         String tagLine = displayName(account.tagLine(), tag);
@@ -121,7 +124,7 @@ public class PlayerService {
 
     private static String requireNotBlank(String value, String field) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(field + " ne doit pas être vide");
+            throw new InvalidRequestException("Le " + field + " du Riot ID ne doit pas être vide.");
         }
         return value.strip();
     }

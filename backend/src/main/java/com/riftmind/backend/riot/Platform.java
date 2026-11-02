@@ -3,6 +3,7 @@ package com.riftmind.backend.riot;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Plateforme (serveur de jeu) League of Legends et sa région de routage Match-V5.
@@ -87,6 +88,12 @@ public enum Platform {
         return Arrays.stream(values())
                 .filter(p -> p.id.equalsIgnoreCase(normalized) || p.shortName.equalsIgnoreCase(normalized))
                 .findFirst();
+    }
+
+    /** Valeurs acceptées par {@link #find(String)}, pour les messages d'erreur : {@code br1, la1, … (ou BR, LAN, …)}. */
+    public static String acceptedValues() {
+        return Arrays.stream(values()).map(Platform::id).collect(Collectors.joining(", "))
+                + " (ou " + Arrays.stream(values()).map(Platform::shortName).collect(Collectors.joining(", ")) + ")";
     }
 
     /** Comme {@link #find(String)}, mais lève une exception si la plateforme est inconnue. */
