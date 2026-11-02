@@ -17,6 +17,7 @@ Le joueur est un Challenger SoloQ : ses données sont complètes (rang, 20 match
 | `match.json` | Match-V5 `matches/{matchId}` | Partie SoloQ complète, 10 joueurs (~120 Ko) |
 
 En Java, utiliser `RiotFixtures` (dans `src/test/java/.../riot/`) : noms des fichiers, `PUUID`, `GAME_NAME`, `MATCH_ID`, etc.
+`RiotFixtures.remakeMatch()` dérive un **remake** de `match.json` (aucun vrai remake trouvé dans 30 matchs, environ 1 % des parties).
 
 ## Anonymisation
 
@@ -42,6 +43,4 @@ node scripts/riot-fixtures.mjs   # depuis la racine, avec RIOT_API_KEY dans .env
 Le script échoue si un identifiant réel reste dans un fichier. Après une régénération, relire le diff : les valeurs
 changent, les tests qui comptent sur des chiffres précis du match (kills, champion…) devront peut-être être adaptés.
 
-À ajouter plus tard, si besoin :
-- un **remake** (`gameEndedInEarlySurrender`, tâche 4.5). Aucun n'a été trouvé dans 30 matchs (environ 1 % des parties), donc il pourra être dérivé de `match.json` ;
-- une partie **ARAM** ou **Arena**.
+À ajouter plus tard, si besoin : une partie **ARAM** ou **Arena**.

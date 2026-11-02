@@ -53,6 +53,20 @@ public final class RiotFixtures {
         }
     }
 
+    /**
+     * {@link #MATCH} transformé en remake (tâche 4.5) : tous les joueurs ont {@code gameEndedInEarlySurrender} et la
+     * partie dure 3 min 30. Aucun vrai remake n'a été trouvé en récupérant les fichiers (environ 1 % des parties).
+     */
+    public static String remakeMatch() {
+        String match = read(MATCH);
+        String remake = match.replace("\"gameEndedInEarlySurrender\": false", "\"gameEndedInEarlySurrender\": true")
+                .replace("\"gameDuration\": 1463", "\"gameDuration\": 210");
+        if (remake.equals(match) || remake.contains("\"gameEndedInEarlySurrender\": false")) {
+            throw new IllegalStateException("match.json a changé de format : adapter RiotFixtures.remakeMatch()");
+        }
+        return remake;
+    }
+
     /** PUUID factice du n-ième joueur (1 = joueur principal, 2 à 10 = les autres joueurs de {@link #MATCH}). */
     public static String puuid(int n) {
         return ("RiftMindTestPuuid%02d_".formatted(n)).concat("0".repeat(58));

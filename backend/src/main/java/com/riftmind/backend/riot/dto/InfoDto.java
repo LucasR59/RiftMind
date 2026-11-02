@@ -38,6 +38,15 @@ public record InfoDto(
         return gameEndTimestamp != null ? gameDuration : gameDuration / 1000;
     }
 
+    /**
+     * Partie terminée par un remake (vote de reddition anticipée après une déconnexion, avant 3-4 min de jeu) : Riot
+     * marque alors chaque participant avec {@code gameEndedInEarlySurrender}. Un remake reste dans l'historique, mais
+     * ne compte pas dans les statistiques (winrate, KDA…).
+     */
+    public boolean isRemake() {
+        return participants != null && participants.stream().anyMatch(ParticipantDto::gameEndedInEarlySurrender);
+    }
+
     /** Début de la partie. */
     public Instant gameStart() {
         return Instant.ofEpochMilli(gameStartTimestamp);

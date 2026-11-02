@@ -195,6 +195,23 @@ class MatchIngestionServiceTest {
         riot.verify();
     }
 
+    /** Tâche 4.5 : un remake est enregistré (il reste dans l'historique), marqué pour être exclu des statistiques. */
+    @Test
+    void unRemakeEstEnregistreEtMarque() {
+        riotListsMatches(IDS_URL, List.of(matchId(1), matchId(2)));
+        riotReturnsMatch(EUROPE, matchId(1));
+        riot.expect(requestTo(EUROPE + "/lol/match/v5/matches/" + matchId(2))).andRespond(withSuccess(
+                RiotFixtures.remakeMatch().replace(RiotFixtures.MATCH_ID, matchId(2)), MediaType.APPLICATION_JSON));
+
+        service.syncRecent(player);
+
+        assertThat(matchRepository.findById(matchId(1)).orElseThrow().isRemake()).isFalse();
+        Match remake = matchRepository.findById(matchId(2)).orElseThrow();
+        assertThat(remake.isRemake()).isTrue();
+        assertThat(remake.getDurationSeconds()).isEqualTo(210);
+        assertThat(participantRepository.findByMatchIdOrderByParticipantId(matchId(2))).hasSize(10);
+    }
+
     @Test
     void unePartieIntrouvableChezRiotEstIgnoree() {
         riotListsMatches(IDS_URL, List.of(matchId(1), matchId(2), matchId(3)));
