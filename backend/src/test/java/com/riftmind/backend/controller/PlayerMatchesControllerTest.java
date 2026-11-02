@@ -25,6 +25,7 @@ import com.riftmind.backend.dto.CompactParticipantResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
 import com.riftmind.backend.dto.ParticipantResponse;
+import com.riftmind.backend.dto.PlayerSummaryResponse;
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.riot.RiotFixtures;
@@ -126,6 +127,23 @@ class PlayerMatchesControllerTest {
         mockMvc.perform(get("/api/players/{puuid}/champions", PUUID)).andExpect(status().isOk());
 
         verify(matchQueryService).getChampionStats(PUUID, null);
+    }
+
+    @Test
+    void renvoieLeResume() throws Exception {
+        when(matchQueryService.getSummary(PUUID)).thenReturn(new PlayerSummaryResponse(20, 12, 8, 60.0, 6.5, 4.0, 7.5,
+                3.5, List.of(new PlayerSummaryResponse.RoleResponse("BOTTOM", 15),
+                        new PlayerSummaryResponse.RoleResponse("UTILITY", 5))));
+
+        mockMvc.perform(get("/api/players/{puuid}/summary", PUUID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.games").value(20))
+                .andExpect(jsonPath("$.wins").value(12))
+                .andExpect(jsonPath("$.losses").value(8))
+                .andExpect(jsonPath("$.winrate").value(60.0))
+                .andExpect(jsonPath("$.kda").value(3.5))
+                .andExpect(jsonPath("$.roles[0].position").value("BOTTOM"))
+                .andExpect(jsonPath("$.roles[0].games").value(15));
     }
 
     @Test

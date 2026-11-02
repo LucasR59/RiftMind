@@ -25,6 +25,7 @@ import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
 import com.riftmind.backend.dto.ParticipantResponse;
+import com.riftmind.backend.dto.PlayerSummaryResponse;
 import com.riftmind.backend.dto.TeamResponse;
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.MatchNotFoundException;
@@ -296,6 +297,68 @@ class MatchQueryServiceTest {
     @Test
     void lesStatsDUnPuuidInconnuDonnentJoueurIntrouvable() {
         assertThatThrownBy(() -> service.getChampionStats(RiotFixtures.puuid(9), null))
+                .isInstanceOf(PlayerNotFoundException.class);
+    }
+
+    // --- 5.4 : résumé des 20 dernières parties ---
+
+    @Test
+    void leResumeCalculeWinrateKdaEtRolesHorsRemakes() {
+        // Mêmes données que les stats par champion : 5 parties comptées, 1 remake ignoré
+        saveChampionGames();
+
+        PlayerSummaryResponse summary = service.getSummary(RiotFixtures.PUUID);
+
+        assertThat(summary.games()).isEqualTo(5);
+        assertThat(summary.wins()).isEqualTo(3);
+        assertThat(summary.losses()).isEqualTo(2);
+        assertThat(summary.winrate()).isEqualTo(60.0);
+        // Éliminations 6+2+10+5+3 = 26, morts 4+5+0+0+6 = 15, assistances 3+1+5+7+2 = 18
+        assertThat(summary.avgKills()).isEqualTo(26 / 5.0);
+        assertThat(summary.avgDeaths()).isEqualTo(3.0);
+        assertThat(summary.avgAssists()).isEqualTo(18 / 5.0);
+        assertThat(summary.kda()).isEqualTo((26 + 18) / 15.0);
+        assertThat(summary.roles()).containsExactly(
+                new PlayerSummaryResponse.RoleResponse("BOTTOM", 3),
+                new PlayerSummaryResponse.RoleResponse("MIDDLE", 2));
+    }
+
+    @Test
+    void leResumeNePrendQueLesVingtDernieresParties() {
+        // 22 parties : les 2 plus anciennes sont des défaites, les 20 plus récentes des victoires
+        for (int n = 1; n <= 22; n++) {
+            save(game(n).me(1, "Annie", "MIDDLE", n > 2, 1, 1, 1, 100, 1000));
+        }
+
+        PlayerSummaryResponse summary = service.getSummary(RiotFixtures.PUUID);
+
+        assertThat(summary.games()).isEqualTo(MatchQueryService.SUMMARY_GAMES);
+        assertThat(summary.winrate()).isEqualTo(100.0);
+    }
+
+    @Test
+    void lesRolesAEgaliteSuiventLOrdreDeLaCarteEtLesPartiesSansRoleSontIgnorees() {
+        save(game(1).me(1, "Annie", "UTILITY", true, 1, 1, 1, 10, 100),
+                game(2).me(1, "Annie", "TOP", true, 1, 1, 1, 10, 100),
+                game(3).queue(450).me(1, "Annie", "", true, 1, 1, 1, 10, 100));
+
+        assertThat(service.getSummary(RiotFixtures.PUUID).roles())
+                .extracting(PlayerSummaryResponse.RoleResponse::position).containsExactly("TOP", "UTILITY");
+    }
+
+    @Test
+    void unJoueurSansPartieAUnResumeVide() {
+        PlayerSummaryResponse summary = service.getSummary(RiotFixtures.PUUID);
+
+        assertThat(summary.games()).isZero();
+        assertThat(summary.winrate()).isZero();
+        assertThat(summary.kda()).isZero();
+        assertThat(summary.roles()).isEmpty();
+    }
+
+    @Test
+    void leResumeDUnPuuidInconnuDonneJoueurIntrouvable() {
+        assertThatThrownBy(() -> service.getSummary(RiotFixtures.puuid(9)))
                 .isInstanceOf(PlayerNotFoundException.class);
     }
 

@@ -167,6 +167,7 @@ Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur l
 | `GET /api/matches/{matchId}` | Détail d'une partie : 10 joueurs et totaux par équipe. Partie inconnue ou personnalisée : 404 |
 | `GET /api/players/{puuid}/matches?page=0&size=10&queue=420` | Historique paginé (du plus récent au plus ancien), lu en base. `queue` facultatif, `size` de 1 à 50 |
 | `GET /api/players/{puuid}/champions?queue=420` | Stats par champion (parties, winrate, KDA, CS/min, dégâts), hors remakes. `queue` facultatif |
+| `GET /api/players/{puuid}/summary` | Résumé des 20 dernières parties hors remakes : winrate, KDA moyen, rôles joués |
 
 - `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.
 - `gameName` et `tagLine` sont encodés dans l'URL (`%20` pour un espace), et la casse est ignorée.
