@@ -205,6 +205,21 @@ class RiotDtoTest {
     }
 
     @Test
+    void detecteUnRemake() {
+        JsonMapper mapper = JsonMapper.builder().build();
+
+        assertThat(fetchMatch().info().isRemake()).isFalse();
+        InfoDto remake = mapper.readValue(RiotFixtures.remakeMatch(), MatchDto.class).info();
+        assertThat(remake.isRemake()).isTrue();
+        assertThat(remake.durationSeconds()).isEqualTo(210);
+    }
+
+    @Test
+    void unePartieSansParticipantNEstPasUnRemake() {
+        assertThat(new InfoDto(0, 0, 1L, 0, "16.21", 420, "EUW1", "CLASSIC", 11, null).isRemake()).isFalse();
+    }
+
+    @Test
     void avantLePatch1120LaDureeEstEnMillisecondes() {
         // Sans gameEndTimestamp, Riot donnait gameDuration en millisecondes
         InfoDto old = new InfoDto(0, 0, null, 1_463_000, "11.19.1", 420, "EUW1", "CLASSIC", 11, List.of());

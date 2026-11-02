@@ -165,7 +165,7 @@ public class MatchIngestionService {
         InfoDto info = dto.info();
         Match match = new Match(matchId, platformOf(matchId, info), info.queueId(),
                 Objects.requireNonNullElse(info.gameVersion(), ""),
-                info.gameStart(), Math.toIntExact(info.durationSeconds()), false, raw, now());
+                info.gameStart(), Math.toIntExact(info.durationSeconds()), info.isRemake(), raw, now());
         List<MatchParticipant> participants = info.participants().stream()
                 .map(p -> MatchParticipant.of(match, p))
                 .toList();

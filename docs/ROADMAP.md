@@ -71,14 +71,14 @@ et **ses winrates par champion**.
 
   ✅ Fini quand : un second appel ne déclenche aucune nouvelle requête vers Riot (vérifié par test).
   → Signature : `syncRecent(platform, puuid, count)` (la plateforme donne la région de routage), et `syncRecent(player)` pour 20 parties. Un second appel ne redemande que la liste des identifiants, aucune partie. Une partie 404 ou illisible est ignorée. Si Riot échoue en cours de route (429, panne), les parties déjà récupérées sont enregistrées puis l'erreur est relancée. Une partie enregistrée en même temps par une autre requête ne provoque pas d'erreur.
-- [ ] **4.5** Détecter les remakes (`gameEndedInEarlySurrender`) et les exclure des stats.
+- [x] **4.5** Détecter les remakes (`gameEndedInEarlySurrender`) et les exclure des stats. → `InfoDto.isRemake()` remplit `match.remake` à l'ingestion. Un remake reste enregistré (et dans l'historique) ; les requêtes de stats (5.3, 5.4) doivent filtrer `remake = false`. Test sur un remake dérivé de `match.json` (`RiotFixtures.remakeMatch()`).
 - [ ] **4.6** Règles Riot : ne pas afficher les **parties personnalisées** (`queueId` 0) dans l'historique ni dans les stats, et n'afficher **aucune stat d'Augments Arena**. ✅ Fini quand : un test vérifie qu'une partie personnalisée est ignorée.
 
 ## Phase 5 — Back : API historique, stats et mise à jour
 - [ ] **5.1** `GET /api/players/{puuid}/matches?page&size&queue` : historique paginé depuis la base. Chaque match contient le résumé du joueur et la liste compacte des 10 participants.
 - [ ] **5.2** `GET /api/matches/{matchId}` : détail complet d'un match.
-- [ ] **5.3** `GET /api/players/{puuid}/champions?queue` : stats par champion calculées en SQL (`GROUP BY champion_id`) : parties, victoires, winrate, KDA moyen, CS/min, dégâts moyens. ✅ Fini quand : un test vérifie les calculs sur des données connues.
-- [ ] **5.4** `GET /api/players/{puuid}/summary` : résumé des 20 dernières games (winrate, KDA, répartition des rôles).
+- [ ] **5.3** `GET /api/players/{puuid}/champions?queue` : stats par champion calculées en SQL (`GROUP BY champion_id`), **hors remakes** : parties, victoires, winrate, KDA moyen, CS/min, dégâts moyens. ✅ Fini quand : un test vérifie les calculs sur des données connues.
+- [ ] **5.4** `GET /api/players/{puuid}/summary` : résumé des 20 dernières games (winrate, KDA, répartition des rôles), **hors remakes**.
 - [ ] **5.5** `POST /api/players/{puuid}/refresh` : met à jour le joueur, ses rangs et ses nouveaux matchs. Délai minimum entre deux mises à jour (2 min) basé sur `last_refreshed_at`, sinon réponse 429 avec le temps restant.
 - [ ] **5.6** Première recherche d'un joueur : lancer automatiquement la récupération de ses 20 derniers matchs.
 - [ ] **5.7** ⚠️ **Demander la clé API de production dès cette étape** (une clé personnelle n'autorise pas un site public). Il faut un prototype fonctionnel et expliquer en quoi le site aide les joueurs. Riot n'annonce aucun délai de validation. Voir [riot-api.md §1](riot-api.md#obtenir-la-clé-de-production-tâche-57).
