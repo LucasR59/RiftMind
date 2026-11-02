@@ -164,6 +164,7 @@ Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur l
 |---|---|
 | `GET /api/ping` | Vérifie que l'API répond |
 | `GET /api/players/{platform}/{gameName}/{tagLine}` | Joueur par Riot ID, avec ses rangs SoloQ et Flex. Cherché en base, sinon récupéré chez Riot et enregistré |
+| `GET /api/matches/{matchId}` | Détail d'une partie : 10 joueurs et totaux par équipe. Partie inconnue ou personnalisée : 404 |
 | `GET /api/players/{puuid}/matches?page=0&size=10&queue=420` | Historique paginé (du plus récent au plus ancien), lu en base. `queue` facultatif, `size` de 1 à 50 |
 
 - `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.

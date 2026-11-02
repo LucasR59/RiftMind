@@ -18,9 +18,13 @@ import org.springframework.context.annotation.Import;
 import com.riftmind.backend.TestMatches;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.dto.CompactParticipantResponse;
+import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
+import com.riftmind.backend.dto.ParticipantResponse;
+import com.riftmind.backend.dto.TeamResponse;
 import com.riftmind.backend.exception.InvalidRequestException;
+import com.riftmind.backend.exception.MatchNotFoundException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.Match;
 import com.riftmind.backend.model.Player;
@@ -172,6 +176,40 @@ class MatchQueryServiceTest {
         assertThatThrownBy(() -> service.getHistory(RiotFixtures.puuid(9), 0, 10, null))
                 .isInstanceOf(PlayerNotFoundException.class)
                 .hasMessageContaining("recherchez-le d'abord par son Riot ID");
+    }
+
+    // --- 5.2 : détail d'une partie ---
+
+    @Test
+    void leDetailContientLesDixJoueursEtLesTotauxParEquipe() {
+        save(game(1).queue(420).duration(1463).me(429, "Kalista", "BOTTOM", true, 6, 4, 3, 250, 19708));
+
+        MatchDetailResponse detail = service.getMatch("EUW1_1");
+
+        assertThat(detail.matchId()).isEqualTo("EUW1_1");
+        assertThat(detail.platform()).isEqualTo("EUW1");
+        assertThat(detail.queueId()).isEqualTo(420);
+        assertThat(detail.durationSeconds()).isEqualTo(1463);
+        assertThat(detail.participants()).hasSize(10).extracting(ParticipantResponse::participantId)
+                .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        assertThat(detail.participants().getFirst().championName()).isEqualTo("Kalista");
+        // Bleue : le joueur (6/4/3, 19708 dégâts) + 4 joueurs à 1/1/1 et 10000 dégâts ; rouge : 5 joueurs à 1/1/1
+        assertThat(detail.teams()).containsExactly(
+                new TeamResponse(100, true, 10, 8, 7, 60000, 59708),
+                new TeamResponse(200, false, 5, 5, 5, 60000, 50000));
+    }
+
+    @Test
+    void unePartieInconnueDonnePartieIntrouvable() {
+        assertThatThrownBy(() -> service.getMatch("EUW1_404"))
+                .isInstanceOf(MatchNotFoundException.class).hasMessage("Partie « EUW1_404 » introuvable.");
+    }
+
+    @Test
+    void unePartiePersonnaliseeDonnePartieIntrouvable() {
+        matchRepository.save(new Match("EUW1_2", "EUW1", 0, "16.21", T0, 600, false, null, T0));
+
+        assertThatThrownBy(() -> service.getMatch("EUW1_2")).isInstanceOf(MatchNotFoundException.class);
     }
 
     @ParameterizedTest

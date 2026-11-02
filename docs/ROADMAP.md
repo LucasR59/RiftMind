@@ -76,7 +76,7 @@ et **ses winrates par champion**.
 
 ## Phase 5 — Back : API historique, stats et mise à jour
 - [x] **5.1** `GET /api/players/{puuid}/matches?page&size&queue` : historique paginé depuis la base. Chaque match contient le résumé du joueur et la liste compacte des 10 participants. → Réponse `{items, page, size, hasMore}` : `hasMore` vient d'une `Slice` (une ligne de plus lue, pas de `COUNT`). 3 requêtes par page, la colonne `raw` n'est jamais lue. `size` de 1 à 50 (défaut 10), PUUID inconnu → 404. Les remakes sont présents, marqués `remake`.
-- [ ] **5.2** `GET /api/matches/{matchId}` : détail complet d'un match.
+- [x] **5.2** `GET /api/matches/{matchId}` : détail complet d'un match. → Les joueurs viennent de `match_participant` (pas de `raw`), avec les totaux par équipe (`teams` : kills, morts, assistances, or, dégâts). Une partie personnalisée (marqueur sans joueurs) répond 404 comme une partie inconnue.
 - [ ] **5.3** `GET /api/players/{puuid}/champions?queue` : stats par champion calculées en SQL (`GROUP BY champion_id`), **hors remakes** : parties, victoires, winrate, KDA moyen, CS/min, dégâts moyens. ✅ Fini quand : un test vérifie les calculs sur des données connues.
 - [ ] **5.4** `GET /api/players/{puuid}/summary` : résumé des 20 dernières games (winrate, KDA, répartition des rôles), **hors remakes**.
 - [ ] **5.5** `POST /api/players/{puuid}/refresh` : met à jour le joueur, ses rangs et ses nouveaux matchs. Délai minimum entre deux mises à jour (2 min) basé sur `last_refreshed_at`, sinon réponse 429 avec le temps restant.
