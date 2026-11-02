@@ -3,7 +3,10 @@ package com.riftmind.backend.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -14,6 +17,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +29,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -32,17 +37,21 @@ import org.springframework.web.client.RestClient;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
+import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
+import com.riftmind.backend.repository.LeagueEntryRepository;
 import com.riftmind.backend.repository.PlayerRepository;
 import com.riftmind.backend.riot.Platform;
+import com.riftmind.backend.riot.RankedQueue;
 import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotFixtures;
 import com.riftmind.backend.riot.RiotProperties;
 import com.riftmind.backend.riot.RiotRateLimiter;
 import com.riftmind.backend.riot.RiotUnavailableException;
+import com.riftmind.backend.riot.dto.LeagueEntryDto;
 
 /**
- * Recherche d'un joueur (tâche 2.4).
+ * Recherche d'un joueur (tâche 2.4), enregistré avec ses rangs (tâche 3.3).
  *
  * <p>Riot est simulé par {@link MockRestServiceServer} avec les vraies réponses anonymisées
  * ({@link RiotFixtures}) : les URL appelées sont vérifiées, et toute requête inattendue fait échouer le test.
@@ -59,16 +68,25 @@ class PlayerServiceTest {
     private static final String EUW1 = "https://euw1.api.riotgames.com";
     private static final String ACCOUNT_URL = EUROPE + "/riot/account/v1/accounts/by-riot-id/Joueur%20Test/EUW";
     private static final String SUMMONER_URL = EUW1 + "/lol/summoner/v4/summoners/by-puuid/" + RiotFixtures.PUUID;
+    private static final String LEAGUE_URL = EUW1 + "/lol/league/v4/entries/by-puuid/" + RiotFixtures.PUUID;
 
     @Autowired
     private PlayerRepository repository;
 
+    @Autowired
+    private LeagueEntryRepository leagueEntryRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     private MockRestServiceServer riot;
     private RiotClient riotClient;
+    private LeagueService leagueService;
     private PlayerService service;
 
     @BeforeEach
     void setUp() {
+        // Supprime aussi les rangs (ON DELETE CASCADE)
         repository.deleteAll();
         RestClient.Builder builder = RestClient.builder();
         riot = MockRestServiceServer.bindTo(builder).build();
@@ -76,7 +94,9 @@ class PlayerServiceTest {
                 RiotProperties.RateLimit.defaults(), Duration.ofMinutes(2), Duration.ofSeconds(5),
                 Duration.ofSeconds(10));
         riotClient = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
-        service = new PlayerService(riotClient, repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        leagueService = new LeagueService(riotClient, leagueEntryRepository, transactionManager, clock);
+        service = new PlayerService(riotClient, repository, leagueService, clock);
     }
 
     private void riotRespondsWithAccountAndSummoner(String accountUrl, String summonerUrl) {
@@ -86,9 +106,20 @@ class PlayerServiceTest {
                 .andRespond(withSuccess(RiotFixtures.read(RiotFixtures.SUMMONER), MediaType.APPLICATION_JSON));
     }
 
+    /** Les trois appels d'une première recherche : compte, invocateur, puis rangs (même hôte que l'invocateur). */
+    private void riotRespondsWithPlayer(String accountUrl, String summonerUrl, String leagueFixture) {
+        riotRespondsWithAccountAndSummoner(accountUrl, summonerUrl);
+        riot.expect(requestTo(summonerUrl.replace("/lol/summoner/v4/summoners/", "/lol/league/v4/entries/")))
+                .andRespond(withSuccess(RiotFixtures.read(leagueFixture), MediaType.APPLICATION_JSON));
+    }
+
+    private void riotRespondsWithPlayer(String accountUrl, String summonerUrl) {
+        riotRespondsWithPlayer(accountUrl, summonerUrl, RiotFixtures.LEAGUE_ENTRIES);
+    }
+
     @Test
     void unNouveauJoueurEstRecupereChezRiotPuisEnregistre() {
-        riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
 
         Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
 
@@ -102,12 +133,65 @@ class PlayerServiceTest {
         assertThat(repository.findById(RiotFixtures.PUUID)).isPresent();
     }
 
+    @Test
+    void unNouveauJoueurEstEnregistreAvecSesRangs() {
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
+
+        service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        riot.verify();
+        assertThat(leagueService.findByPuuid(RiotFixtures.PUUID)).singleElement().satisfies(entry -> {
+            assertThat(entry.getQueueType()).isEqualTo(RankedQueue.RANKED_SOLO_5x5);
+            assertThat(entry.getTier()).isEqualTo("CHALLENGER");
+            assertThat(entry.getLeaguePoints()).isEqualTo(1234);
+            assertThat(entry.getUpdatedAt()).as("même instant que le joueur").isEqualTo(NOW);
+        });
+    }
+
+    @Test
+    void unJoueurNonClasseEstEnregistreSansRang() {
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL, RiotFixtures.LEAGUE_ENTRIES_UNRANKED);
+
+        Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        riot.verify();
+        assertThat(player.getPuuid()).isEqualTo(RiotFixtures.PUUID);
+        assertThat(leagueService.findByPuuid(RiotFixtures.PUUID)).isEmpty();
+    }
+
+    @Test
+    void uneErreurRiotSurLesRangsNEnregistreRienEtLaRechercheSuivanteReessaie() {
+        riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+        riot.expect(requestTo(LEAGUE_URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertThatThrownBy(() -> service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW"))
+                .isInstanceOf(RiotUnavailableException.class);
+        riot.verify();
+        // Sans joueur en base, la prochaine recherche rappellera Riot au lieu de renvoyer un joueur sans rangs
+        assertThat(repository.count()).isZero();
+        assertThat(leagueEntryRepository.count()).isZero();
+    }
+
+    @Test
+    void unJoueurDejaEnBaseGardeSesRangsSansAppelerRiot() {
+        repository.save(new Player(RiotFixtures.PUUID, "Joueur Test", "EUW", Platform.EUW1, 100, 1, NOW));
+        leagueService.save(RiotFixtures.PUUID, List.of(
+                new LeagueEntryDto("RANKED_FLEX_SR", "GOLD", "II", 45, 12, 10, false)),
+                NOW);
+
+        service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        riot.verify();
+        assertThat(leagueService.findByPuuid(RiotFixtures.PUUID)).extracting(LeagueEntry::getTier)
+                .containsExactly("GOLD");
+    }
+
     /** Vu en direct : la 1ʳᵉ réponse avait des nanosecondes, la suivante (relue en base) des microsecondes. */
     @Test
     void laDateDeMiseAJourRenvoyeeEstCelleStockeeEnBase() {
         Instant withNanos = Instant.parse("2026-11-01T23:22:34.164986960Z");
-        service = new PlayerService(riotClient, repository, Clock.fixed(withNanos, ZoneOffset.UTC));
-        riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+        service = new PlayerService(riotClient, repository, leagueService, Clock.fixed(withNanos, ZoneOffset.UTC));
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
 
         Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
 
@@ -129,7 +213,7 @@ class PlayerServiceTest {
 
     @Test
     void leJoueurGardeLEcritureExacteDeRiotEtLaSaisieEstNettoyee() {
-        riotRespondsWithAccountAndSummoner(
+        riotRespondsWithPlayer(
                 EUROPE + "/riot/account/v1/accounts/by-riot-id/joueur%20test/euw", SUMMONER_URL);
 
         Player player = service.getOrFetch(Platform.EUW1, "  joueur test ", " euw");
@@ -145,7 +229,7 @@ class PlayerServiceTest {
         // Le PUUID est connu sous son ancien Riot ID, sur une autre plateforme
         repository.save(new Player(RiotFixtures.PUUID, "Ancien Nom", "OLD", Platform.EUN1, 100, 1,
                 NOW.minus(Duration.ofDays(30))));
-        riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
 
         Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
 
@@ -186,7 +270,7 @@ class PlayerServiceTest {
     @Test
     void unePlateformeSeaPasseParAsiaPourLeCompte() {
         // Account-V1 n'est pas servi sur sea (docs/riot-api.md §3)
-        riotRespondsWithAccountAndSummoner(
+        riotRespondsWithPlayer(
                 "https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Joueur%20Test/EUW",
                 "https://sg2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/" + RiotFixtures.PUUID);
 
@@ -230,10 +314,14 @@ class PlayerServiceTest {
         when(racingRepository.save(any(Player.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate key value violates player_pkey"));
         riotRespondsWithAccountAndSummoner(ACCOUNT_URL, SUMMONER_URL);
+        LeagueService mockedLeagueService = mock(LeagueService.class);
 
-        Player player = new PlayerService(riotClient, racingRepository, Clock.fixed(NOW, ZoneOffset.UTC))
+        Player player = new PlayerService(riotClient, racingRepository, mockedLeagueService,
+                Clock.fixed(NOW, ZoneOffset.UTC))
                 .getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
 
         assertThat(player).isSameAs(savedByOtherRequest);
+        // Les rangs sont quand même enregistrés (LeagueService gère lui aussi les écritures simultanées)
+        verify(mockedLeagueService).save(eq(RiotFixtures.PUUID), anyList(), eq(NOW));
     }
 }

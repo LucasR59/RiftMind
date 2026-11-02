@@ -3,6 +3,7 @@ package com.riftmind.backend.service;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotNotFoundException;
 import com.riftmind.backend.riot.dto.AccountDto;
+import com.riftmind.backend.riot.dto.LeagueEntryDto;
 import com.riftmind.backend.riot.dto.SummonerDto;
 
 /**
@@ -37,17 +39,20 @@ public class PlayerService {
 
     private final RiotClient riotClient;
     private final PlayerRepository playerRepository;
+    private final LeagueService leagueService;
     private final Clock clock;
 
-    public PlayerService(RiotClient riotClient, PlayerRepository playerRepository, Clock clock) {
+    public PlayerService(RiotClient riotClient, PlayerRepository playerRepository, LeagueService leagueService,
+            Clock clock) {
         this.riotClient = riotClient;
         this.playerRepository = playerRepository;
+        this.leagueService = leagueService;
         this.clock = clock;
     }
 
     /**
-     * Renvoie le joueur depuis la base s'il y est. Sinon, l'appelle chez Riot (Account-V1 puis Summoner-V4) et
-     * l'enregistre.
+     * Renvoie le joueur depuis la base s'il y est. Sinon, l'appelle chez Riot (Account-V1, Summoner-V4, puis
+     * League-V4 pour ses rangs) et l'enregistre avec ses rangs.
      *
      * <ul>
      *   <li>La recherche en base ignore la casse. Le joueur enregistré garde l'écriture exacte renvoyée par Riot
@@ -73,9 +78,16 @@ public class PlayerService {
             return known.get();
         }
 
+        // Tous les appels à Riot d'abord : si l'un échoue, rien n'est enregistré et la recherche suivante réessaie
         AccountDto account = fetchAccount(platform, name, tag);
         SummonerDto summoner = fetchSummoner(platform, account, name, tag);
-        return save(platform, account, summoner, name, tag);
+        List<LeagueEntryDto> ranks = leagueService.fetch(platform, account.puuid());
+
+        // PostgreSQL stocke les dates à la microseconde : on tronque pour renvoyer la même valeur qu'à la relecture
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        Player player = save(platform, account, summoner, name, tag, now);
+        leagueService.save(player.getPuuid(), ranks, now);
+        return player;
     }
 
     private AccountDto fetchAccount(Platform platform, String name, String tag) {
@@ -96,9 +108,8 @@ public class PlayerService {
         }
     }
 
-    private Player save(Platform platform, AccountDto account, SummonerDto summoner, String name, String tag) {
-        // PostgreSQL stocke les dates à la microseconde : on tronque pour renvoyer la même valeur qu'à la relecture
-        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    private Player save(Platform platform, AccountDto account, SummonerDto summoner, String name, String tag,
+            Instant now) {
         // Riot renvoie l'écriture exacte du Riot ID. Repli sur la saisie si le compte n'en a pas.
         String gameName = displayName(account.gameName(), name);
         String tagLine = displayName(account.tagLine(), tag);

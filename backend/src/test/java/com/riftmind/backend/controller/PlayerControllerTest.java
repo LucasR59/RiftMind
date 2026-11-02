@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,13 +25,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
+import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.riot.Platform;
+import com.riftmind.backend.riot.RankedQueue;
 import com.riftmind.backend.riot.RiotFixtures;
+import com.riftmind.backend.service.LeagueService;
 import com.riftmind.backend.service.PlayerService;
 
 /**
- * {@code GET /api/players/{platform}/{gameName}/{tagLine}} (tâche 2.5). Le service est simulé.
+ * {@code GET /api/players/{platform}/{gameName}/{tagLine}} (tâches 2.5 et 3.3). Les services sont simulés.
  * Les URL déjà encodées passent par {@code URI.create} : avec une chaîne, MockMvc réencoderait le {@code %}.
  */
 @WebMvcTest(PlayerController.class)
@@ -43,6 +47,10 @@ class PlayerControllerTest {
 
     @MockitoBean
     private PlayerService playerService;
+
+    /** Simulé : renvoie une liste vide (joueur non classé) sauf indication contraire. */
+    @MockitoBean
+    private LeagueService leagueService;
 
     private static Player mainPlayer() {
         return new Player(RiotFixtures.PUUID, "Joueur Test", "EUW", Platform.EUW1, 512, 7, REFRESHED_AT);
@@ -62,6 +70,40 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.summonerLevel").value(512))
                 .andExpect(jsonPath("$.profileIconId").value(7))
                 .andExpect(jsonPath("$.lastRefreshedAt").value("2026-11-01T20:00:00Z"));
+    }
+
+    @Test
+    void renvoieLesRangsSoloQPuisFlex() throws Exception {
+        when(playerService.getOrFetch(Platform.EUW1, "Joueur Test", "EUW")).thenReturn(mainPlayer());
+        when(leagueService.findByPuuid(RiotFixtures.PUUID)).thenReturn(List.of(
+                new LeagueEntry(RiotFixtures.PUUID, RankedQueue.RANKED_SOLO_5x5, "CHALLENGER", "I", 1234, 250, 200,
+                        false, REFRESHED_AT),
+                new LeagueEntry(RiotFixtures.PUUID, RankedQueue.RANKED_FLEX_SR, "GOLD", "II", 45, 12, 10, true,
+                        REFRESHED_AT)));
+
+        mockMvc.perform(get(URI.create("/api/players/euw1/Joueur%20Test/EUW")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ranks.length()").value(2))
+                .andExpect(jsonPath("$.ranks[0].queueType").value("RANKED_SOLO_5x5"))
+                .andExpect(jsonPath("$.ranks[0].tier").value("CHALLENGER"))
+                .andExpect(jsonPath("$.ranks[0].rank").value("I"))
+                .andExpect(jsonPath("$.ranks[0].leaguePoints").value(1234))
+                .andExpect(jsonPath("$.ranks[0].wins").value(250))
+                .andExpect(jsonPath("$.ranks[0].losses").value(200))
+                .andExpect(jsonPath("$.ranks[0].hotStreak").value(false))
+                .andExpect(jsonPath("$.ranks[1].queueType").value("RANKED_FLEX_SR"))
+                .andExpect(jsonPath("$.ranks[1].hotStreak").value(true));
+    }
+
+    @Test
+    void unJoueurNonClasseRenvoieUneListeDeRangsVide() throws Exception {
+        when(playerService.getOrFetch(Platform.EUW1, "Joueur Test", "EUW")).thenReturn(mainPlayer());
+        when(leagueService.findByPuuid(RiotFixtures.PUUID)).thenReturn(List.of());
+
+        mockMvc.perform(get(URI.create("/api/players/euw1/Joueur%20Test/EUW")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ranks").isArray())
+                .andExpect(jsonPath("$.ranks").isEmpty());
     }
 
     @ParameterizedTest
