@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-import ErrorState from '@/components/ui/ErrorState.vue'
+import ApiErrorState from '@/components/ui/ApiErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import MatchCard from '@/components/match/MatchCard.vue'
 import { getPlayerMatches } from '@/api/matches'
@@ -80,11 +80,10 @@ defineExpose({ reload: loadFirstPage })
       <LoadingSkeleton v-for="n in 3" :key="n" shape="rect" height="96px" />
     </div>
 
-    <ErrorState
+    <ApiErrorState
       v-else-if="error"
+      :error="error"
       title="Historique indisponible"
-      message="Les parties n'ont pas pu être chargées."
-      retryable
       @retry="loadFirstPage"
     />
 

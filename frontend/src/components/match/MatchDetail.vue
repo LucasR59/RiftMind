@@ -6,7 +6,7 @@ import ChampionIcon from '@/components/game/ChampionIcon.vue'
 import ItemIcon from '@/components/game/ItemIcon.vue'
 import RuneIcon from '@/components/game/RuneIcon.vue'
 import SpellIcon from '@/components/game/SpellIcon.vue'
-import ErrorState from '@/components/ui/ErrorState.vue'
+import ApiErrorState from '@/components/ui/ApiErrorState.vue'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton.vue'
 import { getMatch } from '@/api/matches'
 import { playerRoute } from '@/router/links'
@@ -61,11 +61,11 @@ const damageShare = (p: Participant) =>
   <div class="match-detail" :aria-busy="loading" data-testid="match-detail">
     <LoadingSkeleton v-if="loading" shape="rect" height="12rem" />
 
-    <ErrorState
+    <ApiErrorState
       v-else-if="error"
+      :error="error"
+      subject="Partie"
       title="Détail indisponible"
-      message="Le détail de cette partie n'a pas pu être chargé."
-      retryable
       @retry="load"
     />
 

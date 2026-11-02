@@ -107,7 +107,7 @@ describe('PlayerHeader', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="refresh-error"]').text()).toContain(
-      'les serveurs Riot ne répondent pas',
+      'La mise à jour a échoué. Les données de League of Legends sont temporairement indisponibles.',
     )
     expect(button(wrapper).attributes('disabled')).toBeUndefined()
   })
