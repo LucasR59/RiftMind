@@ -56,7 +56,7 @@ et **ses winrates par champion**.
 - [x] **3.3** Ajouter les rangs SoloQ et Flex à `PlayerResponse`. ✅ Fini quand : un joueur non classé renvoie une liste vide, sans erreur. → Champ `ranks` (SoloQ puis Flex). À la première recherche, League-V4 est appelé avec Account-V1 et Summoner-V4, **avant** toute écriture : si Riot échoue, rien n'est enregistré et la recherche suivante réessaie. Un joueur déjà en base renvoie ses rangs stockés, sans appeler Riot.
 
 ## Phase 4 — Back : récupération et stockage des matchs
-- [ ] **4.1** Créer les DTO Match-V5 (`MatchDto`, `InfoDto`, `ParticipantDto`), limités aux champs utiles.
+- [x] **4.1** Créer les DTO Match-V5 (`MatchDto`, `InfoDto`, `ParticipantDto`), limités aux champs utiles. → `ParticipantDto` calcule `cs()`, `items()` (7 cases, balise en dernier), `summonerSpells()`, `keystone()` et `secondaryStyle()`. `InfoDto.durationSeconds()` gère l'ancien format en ms (avant le patch 11.20). Les Augments Arena ne sont pas lus.
 - [ ] **4.2** Migration `V4__match.sql` : tables `match` et `match_participant`.
   - `match` : `match_id` (clé primaire), `platform`, `queue_id`, `game_version`, `game_start`, `duration_s`, `remake`, et `raw jsonb` (réponse brute gardée pour les besoins futurs).
   - `match_participant` : `match_id`, `puuid`, `team_id`, `champion_id`, `champion_name`, `position`, `win`, `kills`, `deaths`, `assists`, `cs`, `gold`, `damage_champions`, `vision_score`, `items int[]`, `summoner_spells int[]`, `keystone`, `secondary_style`.
