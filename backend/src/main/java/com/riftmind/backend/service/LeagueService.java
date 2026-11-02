@@ -1,6 +1,5 @@
 package com.riftmind.backend.service;
 
-import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -13,10 +12,8 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -42,8 +39,6 @@ public class LeagueService {
     private static final Logger log = LoggerFactory.getLogger(LeagueService.class);
 
     static final String ENTRIES_BY_PUUID = "/lol/league/v4/entries/by-puuid/{puuid}";
-    /** SQLState de PostgreSQL pour une violation de contrainte d'unicité. */
-    private static final String UNIQUE_VIOLATION = "23505";
     private static final ParameterizedTypeReference<List<LeagueEntryDto>> ENTRY_LIST =
             new ParameterizedTypeReference<>() {
             };
@@ -104,7 +99,7 @@ public class LeagueService {
         try {
             return transaction.execute(status -> replaceEntries(puuid, byQueue, fetchedAt));
         } catch (DataIntegrityViolationException e) {
-            if (!isDuplicateKey(e)) {
+            if (!DuplicateKeys.isDuplicateKey(e)) {
                 throw e;
             }
             // Deux mises à jour simultanées du même joueur : l'autre a inséré la même file en premier, avec des
@@ -112,13 +107,6 @@ public class LeagueService {
             log.debug("Rangs du joueur {} enregistrés en parallèle par une autre requête", puuid);
             return findByPuuid(puuid);
         }
-    }
-
-    /** Vrai pour une clé déjà présente (SQLState 23505), faux pour une autre contrainte (CHECK, clé étrangère). */
-    private static boolean isDuplicateKey(DataIntegrityViolationException e) {
-        return e instanceof DuplicateKeyException
-                || NestedExceptionUtils.getMostSpecificCause(e) instanceof SQLException sql
-                        && UNIQUE_VIOLATION.equals(sql.getSQLState());
     }
 
     private List<LeagueEntry> replaceEntries(String puuid, Map<RankedQueue, LeagueEntryDto> byQueue,

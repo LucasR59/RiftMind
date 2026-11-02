@@ -63,13 +63,14 @@ et **ses winrates par champion**.
   - Index : (`puuid`, `game_start desc`) et (`puuid`, `champion_id`).
   - → Clé de `match_participant` : (`match_id`, `participant_id`), car le PUUID n'est pas unique dans une partie (bots). Colonnes ajoutées : `game_name`, `tag_line`, `champ_level` (liste compacte des participants), `created_at` sur `match`. `game_start` et `queue_id` sont recopiés dans `match_participant` pour que l'historique se lise avec un seul index. `match.platform` sans contrainte (anciennes plateformes PH2/TH2). `raw` facultatif (4.6). Supprimer un match supprime ses participants.
 - [x] **4.3** Créer les entités et repositories `Match` et `MatchParticipant`. → Entités immuables, sans relation JPA entre elles. `MatchParticipant.of(match, dto)` recopie `game_start` et `queue_id` depuis le match. `raw` est mappé en `jsonb` (`@JdbcTypeCode(SqlTypes.JSON)`), `items` et `summoner_spells` en `int[]`. `MatchRepository.findExistingIds(ids)` ne lit que les clés.
-- [ ] **4.4** Créer `MatchIngestionService.syncRecent(puuid, count=20)` :
+- [x] **4.4** Créer `MatchIngestionService.syncRecent(puuid, count=20)` :
   - récupérer les identifiants des derniers matchs ;
   - écarter ceux déjà en base ;
   - récupérer les matchs manquants ;
   - tout enregistrer dans une seule transaction.
 
   ✅ Fini quand : un second appel ne déclenche aucune nouvelle requête vers Riot (vérifié par test).
+  → Signature : `syncRecent(platform, puuid, count)` (la plateforme donne la région de routage), et `syncRecent(player)` pour 20 parties. Un second appel ne redemande que la liste des identifiants, aucune partie. Une partie 404 ou illisible est ignorée. Si Riot échoue en cours de route (429, panne), les parties déjà récupérées sont enregistrées puis l'erreur est relancée. Une partie enregistrée en même temps par une autre requête ne provoque pas d'erreur.
 - [ ] **4.5** Détecter les remakes (`gameEndedInEarlySurrender`) et les exclure des stats.
 - [ ] **4.6** Règles Riot : ne pas afficher les **parties personnalisées** (`queueId` 0) dans l'historique ni dans les stats, et n'afficher **aucune stat d'Augments Arena**. ✅ Fini quand : un test vérifie qu'une partie personnalisée est ignorée.
 
