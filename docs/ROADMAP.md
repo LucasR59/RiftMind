@@ -102,7 +102,7 @@ et **ses winrates par champion**.
   - bouton « Voir plus » pour la pagination.
   - → `MatchHistory` (pages de 10, « Voir plus » ajoute la page suivante sans doublon, rechargé après « Mettre à jour ») et `MatchCard` (KDA et ratio, CS/min, runes, 7 cases d'objets, liste des deux équipes avec liens vers les profils ; « Inconnu » sans Riot ID). La liste des équipes est masquée sous 1100 px.
 - [x] **7.5** Détail d'une game, affiché en dépliant la carte : les 10 joueurs, dégâts, gold, vision. → Bouton ▾ (`aria-expanded`) sur chaque carte ; `MatchDetail` est chargé à la première ouverture puis gardé. Un tableau par équipe (résultat, totaux) : joueur (sorts, runes, lien), KDA, dégâts avec barre relative au maximum de la partie, or, CS/min, vision, objets ; le joueur du profil est mis en évidence. Défilement horizontal sur petit écran.
-- [ ] **7.6** Tableau des stats par champion : triable, filtrable par file (SoloQ, Flex, toutes).
+- [x] **7.6** Tableau des stats par champion : triable, filtrable par file (SoloQ, Flex, toutes). → `ChampionStatsTable` dans un onglet « Champions » (à côté de « Parties », chargé à la première ouverture). Filtre Toutes/Solo/Duo/Flexible (rechargement), tri par colonne (`aria-sort`, second clic pour inverser, noms de A à Z, à égalité le plus joué d'abord).
 - [ ] **7.7** Bloc résumé des 20 dernières games : winrate, KDA moyen, rôles préférés.
 - [ ] **7.8** États d'erreur : joueur introuvable, API Riot indisponible, limite de requêtes atteinte (avec bouton pour réessayer).
 - [ ] **7.9** Affichage mobile, puis vérification sur 390 px de large.

@@ -5,7 +5,7 @@ import { createMemoryHistory } from 'vue-router'
 
 import PlayerView from '@/views/PlayerView.vue'
 import { ApiError } from '@/api/http'
-import { getPlayer } from '@/api/players'
+import { getChampionStats, getPlayer } from '@/api/players'
 import { getPlayerMatches } from '@/api/matches'
 import { reloadRecentSearches, useRecentSearches } from '@/composables/useRecentSearches'
 import { createAppRouter } from '@/router'
@@ -78,6 +78,23 @@ describe('PlayerView', () => {
     await error.find('button').trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="player-riot-id"]').exists()).toBe(true)
+  })
+
+  it('affiche les parties, et les stats par champion à la première ouverture de leur onglet', async () => {
+    vi.mocked(getPlayer).mockResolvedValue(player)
+    vi.mocked(getChampionStats).mockResolvedValue([])
+    const { wrapper } = await mountAt('/euw1/Joueur%20Test-EUW')
+
+    expect(wrapper.find('[data-testid="tab-matches"]').attributes('aria-selected')).toBe('true')
+    expect(getPlayerMatches).toHaveBeenCalledTimes(1)
+    expect(getChampionStats).not.toHaveBeenCalled()
+
+    await wrapper.find('[data-testid="tab-champions"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="tab-champions"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('#panel-champions').exists()).toBe(true)
+    expect(getChampionStats).toHaveBeenCalledWith(player.puuid, undefined)
   })
 
   it('recharge quand on passe à un autre joueur', async () => {
