@@ -148,6 +148,73 @@ describe('store staticData', () => {
   })
 })
 
+describe('nouveau patch pendant la visite (checkForUpdate)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('charge la nouvelle version et met à jour les URL des images', async () => {
+    mockDataDragon(['16.21.1'])
+    const store = useStaticDataStore()
+    await store.load()
+
+    vi.restoreAllMocks()
+    const fetchMock = mockDataDragon(['16.22.1', '16.21.1'])
+    expect(await store.checkForUpdate(0)).toBe(true)
+
+    expect(store.version).toBe('16.22.1')
+    expect(store.itemIconUrl(3087)).toBe(`${DD}/cdn/16.22.1/img/item/3087.png`)
+    expect(dataFileCalls(fetchMock)).toBe(4)
+    expect(localStorage.getItem(`${CACHE_PREFIX}16.21.1`)).toBeNull()
+  })
+
+  it('ne recharge rien si la version n’a pas changé', async () => {
+    mockDataDragon(['16.21.1'])
+    const store = useStaticDataStore()
+    await store.load()
+
+    vi.restoreAllMocks()
+    const fetchMock = mockDataDragon(['16.21.1'])
+    expect(await store.checkForUpdate(0)).toBe(false)
+
+    expect(dataFileCalls(fetchMock)).toBe(0)
+  })
+
+  it('vérifie au plus une fois par heure', async () => {
+    const fetchMock = mockDataDragon(['16.21.1'])
+    const store = useStaticDataStore()
+    await store.load()
+
+    await store.checkForUpdate()
+    await store.checkForUpdate()
+
+    // Seul le chargement initial a demandé la liste des versions
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).endsWith('versions.json')),
+    ).toHaveLength(1)
+  })
+
+  it('garde les données actuelles si Data Dragon ne répond pas', async () => {
+    mockDataDragon(['16.21.1'])
+    const store = useStaticDataStore()
+    await store.load()
+
+    vi.restoreAllMocks()
+    mockDataDragon(null)
+    expect(await store.checkForUpdate(0)).toBe(false)
+
+    expect(store.version).toBe('16.21.1')
+    expect(store.status).toBe('ready')
+  })
+
+  it('ne fait rien tant que le premier chargement n’est pas terminé', async () => {
+    const store = useStaticDataStore()
+
+    expect(await store.checkForUpdate(0)).toBe(false)
+  })
+})
+
 describe('compareVersionsDesc', () => {
   it('trie les versions numériquement, la plus récente en premier', () => {
     expect(['16.9.1', '16.21.1', '15.24.1'].sort(compareVersionsDesc)).toEqual([

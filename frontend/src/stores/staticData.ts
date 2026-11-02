@@ -15,6 +15,9 @@ import {
 } from '@/api/ddragon'
 import { queueInfo, type QueueInfo } from '@/constants/queues'
 
+/** Délai minimum entre deux vérifications de la version de Data Dragon pendant une visite : 1 h. */
+export const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
+
 /** Préfixe des clés `localStorage` : une entrée par version, ex. `riftmind:ddragon:fr_FR:16.21.1`. */
 export const CACHE_PREFIX = `riftmind:ddragon:${DDRAGON_LOCALE}:`
 
@@ -33,6 +36,8 @@ export const useStaticDataStore = defineStore('staticData', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const error = ref<string | null>(null)
   let pending: Promise<void> | null = null
+  /** Dernière fois (ms) que la version de Data Dragon a été vérifiée. */
+  let checkedAt = 0
 
   const version = computed(() => bundle.value?.version ?? null)
 
@@ -54,6 +59,7 @@ export const useStaticDataStore = defineStore('staticData', () => {
       let latest: string
       try {
         latest = await fetchLatestVersion()
+        checkedAt = Date.now()
       } catch (e) {
         const fallback = readLatestCached()
         if (!fallback) throw e
@@ -71,6 +77,30 @@ export const useStaticDataStore = defineStore('staticData', () => {
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       status.value = 'error'
+    }
+  }
+
+  /**
+   * Nouveau patch pendant que le site est ouvert (tâche 8.3) : revérifie la version, au plus une fois par
+   * `minIntervalMs`, et remplace les données si elle a changé. Sans effet si Data Dragon ne répond pas : les données
+   * actuelles restent affichées.
+   *
+   * @return vrai si une nouvelle version a été chargée
+   */
+  async function checkForUpdate(minIntervalMs = UPDATE_CHECK_INTERVAL_MS): Promise<boolean> {
+    if (status.value !== 'ready' || pending || Date.now() - checkedAt < minIntervalMs) {
+      return false
+    }
+    checkedAt = Date.now()
+    try {
+      const latest = await fetchLatestVersion()
+      if (latest === version.value) return false
+      const data = readCache(latest) ?? (await fetchStaticData(latest))
+      writeCache(data)
+      bundle.value = data
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -121,6 +151,7 @@ export const useStaticDataStore = defineStore('staticData', () => {
     error,
     version,
     load,
+    checkForUpdate,
     champion,
     item,
     spell,
