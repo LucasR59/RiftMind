@@ -17,6 +17,12 @@ public class PlayerNotFoundException extends ResourceNotFoundException {
                 + platform.shortName() + " (" + platform.label() + ").");
     }
 
+    /** Aucun joueur enregistré avec ce PUUID : il doit d'abord être recherché par son Riot ID. */
+    public static PlayerNotFoundException unknownPuuid(String puuid) {
+        return new PlayerNotFoundException("Joueur inconnu de RiftMind (PUUID " + puuid
+                + ") : recherchez-le d'abord par son Riot ID.");
+    }
+
     /** Le compte Riot existe, mais n'a pas de profil League of Legends sur cette plateforme. */
     public static PlayerNotFoundException noProfileOnPlatform(String gameName, String tagLine, Platform platform) {
         return new PlayerNotFoundException("Le compte Riot « " + gameName + "#" + tagLine
