@@ -184,6 +184,8 @@ const damageShare = (p: Participant) =>
 
 .match-detail__team {
   --team-color: var(--color-accent);
+  /* Fond opaque équivalent au fond de l'équipe, pour la colonne figée */
+  --sticky-bg: color-mix(in srgb, var(--color-surface) 82%, black);
 
   border-radius: 8px;
   background: rgb(0 0 0 / 15%);
@@ -244,7 +246,23 @@ const damageShare = (p: Participant) =>
 }
 
 .match-detail__me {
+  --sticky-bg: color-mix(
+    in srgb,
+    var(--team-color) 12%,
+    color-mix(in srgb, var(--color-surface) 82%, black)
+  );
+
   background: color-mix(in srgb, var(--team-color) 12%, transparent);
+}
+
+.match-detail__table .match-detail__player-cell,
+.match-detail__table thead th:first-child {
+  /* Colonne figée pendant le défilement horizontal (petits écrans) : on sait toujours de quel joueur il s'agit */
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--sticky-bg);
+  box-shadow: 6px 0 8px -6px rgb(0 0 0 / 60%);
 }
 
 .match-detail__table .match-detail__player-cell {

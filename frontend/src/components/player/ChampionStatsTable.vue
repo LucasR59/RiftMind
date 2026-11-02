@@ -285,9 +285,35 @@ th[aria-sort='descending'] .champion-stats__sort {
   font-size: 0.65rem;
 }
 
+.champion-stats__table .champion-stats__champion,
+.champion-stats__table thead th:first-child {
+  /* Colonne figée pendant le défilement horizontal (petits écrans) */
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  box-shadow: 6px 0 8px -6px rgb(0 0 0 / 60%);
+}
+
 .champion-stats__table .champion-stats__champion {
   font-weight: 600;
   text-align: left;
+}
+
+@media (max-width: 480px) {
+  .champion-stats {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .champion-stats__table {
+    min-width: 460px;
+    font-size: 0.8rem;
+  }
+
+  .champion-stats__table th,
+  .champion-stats__table td {
+    padding: 0.35rem 0.3rem;
+  }
 }
 
 .champion-stats__champion-inner {

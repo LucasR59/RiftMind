@@ -21,7 +21,7 @@ const rate = computed(() => (props.entry ? winrate(props.entry.wins, props.entry
     <h2 class="rank-card__title">{{ title }}</h2>
 
     <div class="rank-card__body">
-      <RankEmblem :tier="entry?.tier" :rank="entry?.rank" :size="72" variant="emblem" />
+      <RankEmblem :tier="entry?.tier" :rank="entry?.rank" :size="64" />
 
       <div v-if="entry" class="rank-card__details">
         <p class="rank-card__rank" data-testid="rank-label">

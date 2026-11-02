@@ -36,7 +36,7 @@ describe('RankCards', () => {
     expect(solo?.find('[data-testid="rank-winrate"]').classes()).toContain(
       'rank-card__winrate--good',
     )
-    expect(solo?.find('img').attributes('src')).toContain('emblem-challenger.png')
+    expect(solo?.find('img').attributes('src')).toContain('ranked-mini-crests/challenger.svg')
   })
 
   it('affiche « Non classé » pour une file sans rang', () => {
