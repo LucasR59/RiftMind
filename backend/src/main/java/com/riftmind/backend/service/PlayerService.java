@@ -18,6 +18,7 @@ import com.riftmind.backend.exception.RefreshCooldownException;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.PlayerRepository;
 import com.riftmind.backend.riot.Platform;
+import com.riftmind.backend.riot.RiotApiException;
 import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotNotFoundException;
 import com.riftmind.backend.riot.RiotProperties;
@@ -60,7 +61,8 @@ public class PlayerService {
 
     /**
      * Renvoie le joueur depuis la base s'il y est. Sinon, l'appelle chez Riot (Account-V1, Summoner-V4, puis
-     * League-V4 pour ses rangs) et l'enregistre avec ses rangs.
+     * League-V4 pour ses rangs), l'enregistre avec ses rangs, puis récupère ses dernières parties
+     * ({@link #syncFirstMatches}).
      *
      * <ul>
      *   <li>La recherche en base ignore la casse. Le joueur enregistré garde l'écriture exacte renvoyée par Riot
@@ -94,7 +96,21 @@ public class PlayerService {
         Instant now = now();
         Player player = save(platform, account, summoner, name, tag, now);
         leagueService.save(player.getPuuid(), ranks, now);
+        syncFirstMatches(player);
         return player;
+    }
+
+    /**
+     * Première recherche du joueur : récupère ses {@value MatchIngestionService#DEFAULT_COUNT} dernières parties, pour
+     * que son historique et ses statistiques soient prêts (tâche 5.6). Si Riot échoue (limite de requêtes, panne), le
+     * joueur est quand même renvoyé : ses parties viendront avec le bouton « Mettre à jour ».
+     */
+    private void syncFirstMatches(Player player) {
+        try {
+            matchIngestionService.syncRecent(player);
+        } catch (RiotApiException e) {
+            log.warn("Parties du nouveau joueur {} non récupérées : {}", player, e.getMessage());
+        }
     }
 
     /**

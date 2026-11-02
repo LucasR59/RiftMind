@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -48,6 +49,7 @@ import com.riftmind.backend.riot.RiotClient;
 import com.riftmind.backend.riot.RiotFixtures;
 import com.riftmind.backend.riot.RiotProperties;
 import com.riftmind.backend.riot.RiotRateLimiter;
+import com.riftmind.backend.riot.RiotRateLimitException;
 import com.riftmind.backend.riot.RiotUnavailableException;
 import com.riftmind.backend.riot.dto.LeagueEntryDto;
 
@@ -187,6 +189,38 @@ class PlayerServiceTest {
         riot.verify();
         assertThat(leagueService.findByPuuid(RiotFixtures.PUUID)).extracting(LeagueEntry::getTier)
                 .containsExactly("GOLD");
+    }
+
+    /** Tâche 5.6 : la première recherche récupère aussi les dernières parties. */
+    @Test
+    void unNouveauJoueurRecupereSesDernieresParties() {
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
+
+        Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        verify(matchIngestionService).syncRecent(player);
+    }
+
+    @Test
+    void unJoueurDejaEnBaseNeRecuperePasSesParties() {
+        repository.save(new Player(RiotFixtures.PUUID, "Joueur Test", "EUW", Platform.EUW1, 100, 1, NOW));
+
+        service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        verifyNoInteractions(matchIngestionService);
+    }
+
+    @Test
+    void siLesPartiesNePeuventPasEtreRecupereesLeJoueurEstQuandMemeRenvoye() {
+        riotRespondsWithPlayer(ACCOUNT_URL, SUMMONER_URL);
+        when(matchIngestionService.syncRecent(any(Player.class)))
+                .thenThrow(new RiotRateLimitException("europe.api.riotgames.com", Duration.ofSeconds(10), "application"));
+
+        Player player = service.getOrFetch(Platform.EUW1, "Joueur Test", "EUW");
+
+        assertThat(player.getRiotId()).isEqualTo("Joueur Test#EUW");
+        assertThat(repository.findById(RiotFixtures.PUUID)).isPresent();
+        assertThat(leagueService.findByPuuid(RiotFixtures.PUUID)).hasSize(1);
     }
 
     /** Vu en direct : la 1ʳᵉ réponse avait des nanosecondes, la suivante (relue en base) des microsecondes. */
