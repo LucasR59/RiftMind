@@ -5,11 +5,11 @@ import { createMemoryHistory } from 'vue-router'
 
 import PlayerView from '@/views/PlayerView.vue'
 import { ApiError } from '@/api/http'
-import { getChampionStats, getPlayer } from '@/api/players'
+import { getChampionStats, getPlayer, getPlayerSummary } from '@/api/players'
 import { getPlayerMatches } from '@/api/matches'
 import { reloadRecentSearches, useRecentSearches } from '@/composables/useRecentSearches'
 import { createAppRouter } from '@/router'
-import { matchPage, player } from '../../fixtures/api'
+import { matchPage, player, playerSummary } from '../../fixtures/api'
 
 // Fonctions simulées ; les constantes (REFRESH_COOLDOWN_SECONDS) gardent leur valeur
 vi.mock('@/api/players')
@@ -25,6 +25,7 @@ async function mountAt(path: string) {
 
 beforeEach(() => {
   vi.mocked(getPlayerMatches).mockResolvedValue({ ...matchPage, hasMore: false })
+  vi.mocked(getPlayerSummary).mockResolvedValue(playerSummary)
   localStorage.clear()
   reloadRecentSearches()
 })
