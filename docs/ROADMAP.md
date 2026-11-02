@@ -75,7 +75,7 @@ et **ses winrates par champion**.
 - [x] **4.6** Règles Riot : ne pas afficher les **parties personnalisées** (`queueId` 0) dans l'historique ni dans les stats, et n'afficher **aucune stat d'Augments Arena**. ✅ Fini quand : un test vérifie qu'une partie personnalisée est ignorée. → Une partie personnalisée est enregistrée comme simple marqueur dans `match` (sans `raw` ni participants) : absente de l'historique et des stats, et jamais redemandée à Riot. Les Augments ne sont lus ni par `ParticipantDto` ni par `MatchParticipant` (vérifié par test).
 
 ## Phase 5 — Back : API historique, stats et mise à jour
-- [ ] **5.1** `GET /api/players/{puuid}/matches?page&size&queue` : historique paginé depuis la base. Chaque match contient le résumé du joueur et la liste compacte des 10 participants.
+- [x] **5.1** `GET /api/players/{puuid}/matches?page&size&queue` : historique paginé depuis la base. Chaque match contient le résumé du joueur et la liste compacte des 10 participants. → Réponse `{items, page, size, hasMore}` : `hasMore` vient d'une `Slice` (une ligne de plus lue, pas de `COUNT`). 3 requêtes par page, la colonne `raw` n'est jamais lue. `size` de 1 à 50 (défaut 10), PUUID inconnu → 404. Les remakes sont présents, marqués `remake`.
 - [ ] **5.2** `GET /api/matches/{matchId}` : détail complet d'un match.
 - [ ] **5.3** `GET /api/players/{puuid}/champions?queue` : stats par champion calculées en SQL (`GROUP BY champion_id`), **hors remakes** : parties, victoires, winrate, KDA moyen, CS/min, dégâts moyens. ✅ Fini quand : un test vérifie les calculs sur des données connues.
 - [ ] **5.4** `GET /api/players/{puuid}/summary` : résumé des 20 dernières games (winrate, KDA, répartition des rôles), **hors remakes**.
