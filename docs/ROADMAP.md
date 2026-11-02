@@ -48,9 +48,10 @@ et **ses winrates par champion**.
 - [x] **2.5** Exposer `GET /api/players/{platform}/{gameName}/{tagLine}` → `PlayerResponse` (404 en `ProblemDetail` si le joueur n'existe pas). ✅ Fini quand : test `@WebMvcTest` + un appel curl réel sur EUW. → `platform` accepte `euw1` ou `EUW`, une valeur inconnue donne une 400 `INVALID_REQUEST`. Vérifié en direct : un vrai Challenger EUW (200, puis servi depuis la base sans appeler Riot), un Riot ID inexistant (404) et un compte sans profil sur KR (404).
 
 ## Phase 3 — Back : rang
-- [ ] **3.1** Migration `V3__league_entry.sql` : table `league_entry`.
+- [x] **3.1** Migration `V3__league_entry.sql` : table `league_entry`.
   - Colonnes : `puuid`, `queue_type`, `tier`, `rank`, `league_points`, `wins`, `losses`, `hot_streak`, `updated_at`.
   - Clé primaire : (`puuid`, `queue_type`).
+  - → `puuid` référence `player` avec `ON DELETE CASCADE` (utile pour 5.8). `queue_type` = nom de l'enum `RankedQueue` (`RANKED_SOLO_5x5`, `RANKED_FLEX_SR`), limité par une contrainte. `tier` et `rank` sans contrainte, pour ne pas casser si Riot ajoute un palier.
 - [ ] **3.2** Créer `LeagueService` : appelle League-V4 (`entries/by-puuid`) et met à jour les rangs en base (insertion ou mise à jour).
 - [ ] **3.3** Ajouter les rangs SoloQ et Flex à `PlayerResponse`. ✅ Fini quand : un joueur non classé renvoie une liste vide, sans erreur.
 
