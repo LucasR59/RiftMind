@@ -143,16 +143,17 @@ async function submit() {
   padding: 0.4rem 0.8rem;
 }
 
+/* Petit écran : région et saisie sur une ligne, bouton en dessous sur toute la largeur */
 @media (max-width: 480px) {
-  .search:not(.search--compact) .search__bar {
+  .search__bar {
     flex-wrap: wrap;
   }
 
-  .search:not(.search--compact) .search__input {
-    flex-basis: calc(100% - 7.5rem);
+  .search__input {
+    flex-basis: calc(100% - 8.5rem);
   }
 
-  .search:not(.search--compact) .search__submit {
+  .search__submit {
     flex-basis: 100%;
   }
 }

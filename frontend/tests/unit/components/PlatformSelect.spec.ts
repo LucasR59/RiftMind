@@ -37,8 +37,11 @@ describe('PlatformSelect', () => {
 
     expect(wrapper.findAll('optgroup')).toHaveLength(4)
     expect(wrapper.findAll('option')).toHaveLength(15)
-    expect((wrapper.element as HTMLSelectElement).value).toBe('euw1')
-    expect(wrapper.attributes('aria-label')).toBe('Région')
+    expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('euw1')
+    expect(wrapper.find('select').attributes('aria-label')).toBe('Région')
+    // Fermé : seule l'abréviation est visible
+    expect(wrapper.find('.platform-select__value').text()).toBe('EUW')
+    expect(wrapper.attributes('title')).toBe('Europe Ouest')
     expect(wrapper.find('option[value="kr"]').text()).toBe('KR — Corée')
   })
 
@@ -51,15 +54,16 @@ describe('PlatformSelect', () => {
       },
     })
 
-    await wrapper.setValue('na1')
+    await wrapper.find('select').setValue('na1')
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['na1'])
     expect(wrapper.props('modelValue')).toBe('na1')
+    expect(wrapper.find('.platform-select__value').text()).toBe('NA')
   })
 
   it('affiche la valeur reçue', () => {
     const wrapper = mount(PlatformSelect, { props: { modelValue: 'kr' } })
 
-    expect((wrapper.element as HTMLSelectElement).value).toBe('kr')
+    expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('kr')
   })
 })
