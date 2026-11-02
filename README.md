@@ -113,6 +113,9 @@ En profil `dev`, chaque appel à Riot est logué avec les compteurs de quota ren
 Détails : [docs/riot-api.md](docs/riot-api.md#comment-riftmind-respecte-les-limites-tâche-15).
 Les tests utilisent une fausse clé (`src/test/resources/config/application.properties`) et n'appellent jamais Riot.
 Ils utilisent de vraies réponses Riot anonymisées (`src/test/resources/riot/`, régénérées par `node scripts/riot-fixtures.mjs`).
+Un test qui écrit en base **sans** transaction de test (`@Transactional(propagation = NOT_SUPPORTED)`) doit porter `@CleanDatabase` :
+la base PostgreSQL est partagée entre les classes de test, et leur ordre diffère entre Windows et la CI (Linux).
+Pour vérifier en local : `./mvnw verify -Dsurefire.runOrder=reversealphabetical`.
 
 ### Option 1 — tout dans Docker
 

@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import com.riftmind.backend.CleanDatabase;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.model.Match;
 import com.riftmind.backend.model.MatchParticipant;
@@ -50,10 +51,12 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Riot est simulé par {@link MockRestServiceServer} : toute requête inattendue fait échouer le test, ce qui
  * vérifie qu'une partie déjà en base n'est jamais redemandée. Les parties sont des copies de {@code match.json} avec un
- * autre identifiant. La base est un vrai PostgreSQL, sans transaction de test.
+ * autre identifiant. La base est un vrai PostgreSQL, sans transaction de test, vidée avant et après chaque test
+ * ({@link CleanDatabase}).
  */
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@CleanDatabase
 @Import(TestcontainersConfiguration.class)
 class MatchIngestionServiceTest {
 
@@ -77,8 +80,6 @@ class MatchIngestionServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Supprimer les matchs supprime aussi leurs participants (ON DELETE CASCADE)
-        matchRepository.deleteAllInBatch();
         RestClient.Builder builder = RestClient.builder();
         riot = MockRestServiceServer.bindTo(builder).build();
         RiotProperties properties = new RiotProperties("RGAPI-test-key-not-a-real-key",

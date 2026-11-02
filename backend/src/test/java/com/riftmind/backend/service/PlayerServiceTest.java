@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import com.riftmind.backend.CleanDatabase;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.exception.InvalidRequestException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
@@ -56,10 +57,11 @@ import com.riftmind.backend.riot.dto.LeagueEntryDto;
  * <p>Riot est simulé par {@link MockRestServiceServer} avec les vraies réponses anonymisées
  * ({@link RiotFixtures}) : les URL appelées sont vérifiées, et toute requête inattendue fait échouer le test.
  * La base est un vrai PostgreSQL, sans transaction de test : chaque accès au repository est validé, comme en
- * production, et la table est vidée avant chaque test.
+ * production, et les tables sont vidées avant et après chaque test ({@link CleanDatabase}).
  */
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@CleanDatabase
 @Import(TestcontainersConfiguration.class)
 class PlayerServiceTest {
 
@@ -86,8 +88,6 @@ class PlayerServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Supprime aussi les rangs (ON DELETE CASCADE)
-        repository.deleteAll();
         RestClient.Builder builder = RestClient.builder();
         riot = MockRestServiceServer.bindTo(builder).build();
         RiotProperties properties = new RiotProperties("RGAPI-test-key-not-a-real-key",
