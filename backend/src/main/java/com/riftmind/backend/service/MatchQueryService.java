@@ -11,10 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.riftmind.backend.dto.CompactParticipantResponse;
+import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
 import com.riftmind.backend.dto.ParticipantResponse;
 import com.riftmind.backend.exception.InvalidRequestException;
+import com.riftmind.backend.exception.MatchNotFoundException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.MatchHeader;
 import com.riftmind.backend.model.MatchParticipant;
@@ -89,6 +91,24 @@ public class MatchQueryService {
                 .map(me -> summary(headers.get(me.getMatchId()), me, playersByMatch.get(me.getMatchId())))
                 .toList();
         return new MatchPageResponse(items, page, size, mine.hasNext());
+    }
+
+    /**
+     * Détail complet d'une partie : ses 10 joueurs et les totaux par équipe (tâche 5.2).
+     *
+     * @throws MatchNotFoundException si la partie n'est pas en base, ou si c'est une partie personnalisée (enregistrée
+     *                                sans joueurs, que Riot interdit d'afficher)
+     */
+    public MatchDetailResponse getMatch(String matchId) {
+        MatchHeader header = matchRepository.findHeader(matchId)
+                .orElseThrow(() -> new MatchNotFoundException(matchId));
+        List<ParticipantResponse> players = participantRepository.findByMatchIdOrderByParticipantId(matchId).stream()
+                .map(ParticipantResponse::from)
+                .toList();
+        if (players.isEmpty()) {
+            throw new MatchNotFoundException(matchId);
+        }
+        return MatchDetailResponse.of(header, players);
     }
 
     private static MatchSummaryResponse summary(MatchHeader header, MatchParticipant me,
