@@ -1,11 +1,14 @@
 package com.riftmind.backend.controller;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.riftmind.backend.dto.ChampionStatsResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.service.MatchQueryService;
 
@@ -38,5 +41,15 @@ public class PlayerMatchesController {
             @RequestParam(defaultValue = "" + MatchQueryService.DEFAULT_PAGE_SIZE) int size,
             @RequestParam(required = false) Integer queue) {
         return matchQueryService.getHistory(puuid, page, size, queue);
+    }
+
+    /**
+     * Statistiques par champion, hors remakes, du plus joué au moins joué, ex.
+     * {@code GET /api/players/{puuid}/champions?queue=420}. {@code queue} absent : toutes les files.
+     */
+    @GetMapping("/champions")
+    public List<ChampionStatsResponse> getChampionStats(@PathVariable String puuid,
+            @RequestParam(required = false) Integer queue) {
+        return matchQueryService.getChampionStats(puuid, queue);
     }
 }

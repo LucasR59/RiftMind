@@ -10,6 +10,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.riftmind.backend.dto.ChampionStatsResponse;
 import com.riftmind.backend.dto.CompactParticipantResponse;
 import com.riftmind.backend.dto.MatchDetailResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
@@ -109,6 +110,20 @@ public class MatchQueryService {
             throw new MatchNotFoundException(matchId);
         }
         return MatchDetailResponse.of(header, players);
+    }
+
+    /**
+     * Statistiques du joueur par champion, hors remakes, du plus joué au moins joué (tâche 5.3). Les totaux sont
+     * calculés en SQL, les moyennes ensuite.
+     *
+     * @param queueId file de jeu (ex. 420 = SoloQ, 440 = Flex), ou {@code null} pour toutes
+     * @throws PlayerNotFoundException si aucun joueur n'a ce PUUID
+     */
+    public List<ChampionStatsResponse> getChampionStats(String puuid, Integer queueId) {
+        requireKnownPlayer(puuid);
+        return participantRepository.findChampionStats(puuid, queueId).stream()
+                .map(ChampionStatsResponse::from)
+                .toList();
     }
 
     private static MatchSummaryResponse summary(MatchHeader header, MatchParticipant me,

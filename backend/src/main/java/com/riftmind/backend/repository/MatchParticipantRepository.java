@@ -6,7 +6,9 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import com.riftmind.backend.model.ChampionStatsRow;
 import com.riftmind.backend.model.MatchParticipant;
 
 /** Accès à la table {@code match_participant}. La clé est le couple (match, numéro du participant). */
@@ -28,4 +30,24 @@ public interface MatchParticipantRepository extends JpaRepository<MatchParticipa
     /** Comme {@link #findByPuuidOrderByGameStartDescMatchIdDesc}, limité à une file de jeu. */
     Slice<MatchParticipant> findByPuuidAndQueueIdOrderByGameStartDescMatchIdDesc(String puuid, int queueId,
             Pageable pageable);
+
+    /**
+     * Totaux du joueur par champion, hors remakes, du plus joué au moins joué (index
+     * {@code match_participant_puuid_champion_idx}). Les parties personnalisées n'ont pas de joueurs : elles ne
+     * comptent jamais.
+     *
+     * @param queueId file de jeu, ou {@code null} pour toutes
+     */
+    @Query("""
+            select new com.riftmind.backend.model.ChampionStatsRow(
+                p.championId, max(p.championName), count(p),
+                sum(case when p.win = true then 1 else 0 end),
+                sum(p.kills), sum(p.deaths), sum(p.assists), sum(p.cs), sum(m.durationSeconds),
+                sum(p.damageChampions))
+            from MatchParticipant p join Match m on m.matchId = p.matchId
+            where p.puuid = :puuid and m.remake = false and (:queueId is null or p.queueId = :queueId)
+            group by p.championId
+            order by count(p) desc, max(p.championName)
+            """)
+    List<ChampionStatsRow> findChampionStats(String puuid, Integer queueId);
 }

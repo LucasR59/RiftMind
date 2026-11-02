@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.riftmind.backend.dto.ChampionStatsResponse;
 import com.riftmind.backend.dto.CompactParticipantResponse;
 import com.riftmind.backend.dto.MatchPageResponse;
 import com.riftmind.backend.dto.MatchSummaryResponse;
@@ -100,6 +101,31 @@ class PlayerMatchesControllerTest {
         mockMvc.perform(get("/api/players/{puuid}/matches?size=500", PUUID))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void renvoieLesStatsParChampion() throws Exception {
+        when(matchQueryService.getChampionStats(PUUID, 420)).thenReturn(List.of(
+                new ChampionStatsResponse(429, "Kalista", 3, 2, 1, 66.67, 6, 3, 3, 3, 10, 19902.67)));
+
+        mockMvc.perform(get("/api/players/{puuid}/champions?queue=420", PUUID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].championId").value(429))
+                .andExpect(jsonPath("$[0].championName").value("Kalista"))
+                .andExpect(jsonPath("$[0].games").value(3))
+                .andExpect(jsonPath("$[0].wins").value(2))
+                .andExpect(jsonPath("$[0].losses").value(1))
+                .andExpect(jsonPath("$[0].winrate").value(66.67))
+                .andExpect(jsonPath("$[0].kda").value(3.0))
+                .andExpect(jsonPath("$[0].csPerMinute").value(10.0))
+                .andExpect(jsonPath("$[0].avgDamage").value(19902.67));
+    }
+
+    @Test
+    void sansFileLesStatsPortentSurToutesLesFiles() throws Exception {
+        mockMvc.perform(get("/api/players/{puuid}/champions", PUUID)).andExpect(status().isOk());
+
+        verify(matchQueryService).getChampionStats(PUUID, null);
     }
 
     @Test
