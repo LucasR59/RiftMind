@@ -8,7 +8,7 @@ import ItemIcon from '@/components/game/ItemIcon.vue'
 import RankEmblem from '@/components/game/RankEmblem.vue'
 import RuneIcon from '@/components/game/RuneIcon.vue'
 import SpellIcon from '@/components/game/SpellIcon.vue'
-import { COMMUNITY_DRAGON_IMAGES, formatRank } from '@/constants/tiers'
+import { formatRank } from '@/constants/tiers'
 import { stripHtml } from '@/utils/text'
 import { DD, loadedStaticData } from '../../fixtures/ddragon'
 
@@ -120,31 +120,27 @@ describe('GameImage', () => {
 })
 
 describe('RankEmblem', () => {
-  it('affiche le blason du palier et le rang en texte alternatif', () => {
+  it("affiche l'emblème du palier, servi par le site, et le rang en texte alternatif", () => {
     const wrapper = mount(RankEmblem, { props: { tier: 'EMERALD', rank: 'IV' } })
 
     const img = wrapper.find('img')
-    expect(img.attributes('src')).toBe(`${COMMUNITY_DRAGON_IMAGES}/ranked-mini-crests/emerald.svg`)
+    expect(img.attributes('src')).toBe('/api/assets/ranks/emerald.png')
     expect(img.attributes('alt')).toBe('Émeraude IV')
   })
 
-  it('utilise le grand emblème et affiche le libellé sans division pour Challenger', () => {
+  it('affiche le libellé sans division pour Challenger', () => {
     const wrapper = mount(RankEmblem, {
-      props: { tier: 'CHALLENGER', rank: 'I', variant: 'emblem', showLabel: true },
+      props: { tier: 'CHALLENGER', rank: 'I', showLabel: true },
     })
 
-    expect(wrapper.find('img').attributes('src')).toBe(
-      `${COMMUNITY_DRAGON_IMAGES}/ranked-emblem/emblem-challenger.png`,
-    )
+    expect(wrapper.find('img').attributes('src')).toBe('/api/assets/ranks/challenger.png')
     expect(wrapper.text()).toBe('Challenger')
   })
 
-  it('affiche « Non classé » avec le blason correspondant (pas de grand emblème)', () => {
-    const wrapper = mount(RankEmblem, { props: { tier: null, variant: 'emblem' } })
+  it('affiche « Non classé » avec son emblème', () => {
+    const wrapper = mount(RankEmblem, { props: { tier: null } })
 
-    expect(wrapper.find('img').attributes('src')).toBe(
-      `${COMMUNITY_DRAGON_IMAGES}/ranked-mini-crests/unranked.svg`,
-    )
+    expect(wrapper.find('img').attributes('src')).toBe('/api/assets/ranks/unranked.png')
     expect(wrapper.find('img').attributes('alt')).toBe('Non classé')
   })
 })

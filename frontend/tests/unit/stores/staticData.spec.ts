@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { CACHE_PREFIX, compareVersionsDesc, useStaticDataStore } from '@/stores/staticData'
-import { DDRAGON_BASE_URL } from '@/api/ddragon'
-import { mockDataDragon } from '../../fixtures/ddragon'
-
-const DD = DDRAGON_BASE_URL
+import { DD, mockDataDragon } from '../../fixtures/ddragon'
 
 const dataFileCalls = (fetchMock: ReturnType<typeof mockDataDragon>) =>
   fetchMock.mock.calls.filter(([url]) => String(url).includes('/data/')).length

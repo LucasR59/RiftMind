@@ -2,7 +2,8 @@
 
 import { vi } from 'vitest'
 
-export const DD = 'https://ddragon.leagueoflegends.com'
+/** Copie locale de Data Dragon servie par le backend (jamais le CDN de Riot). */
+export const DD = '/api/assets/ddragon'
 
 /** Extraits des vrais fichiers Data Dragon 16.21.1 (fr_FR). */
 export const FILES: Record<string, unknown> = {
@@ -53,7 +54,7 @@ export const FILES: Record<string, unknown> = {
 export function mockDataDragon(versions: string[] | null) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input)
-    if (url === `${DD}/api/versions.json`) {
+    if (url === `${DD}/versions.json`) {
       return versions ? Response.json(versions) : new Response(null, { status: 503 })
     }
     const file = url.split('/').pop() ?? ''

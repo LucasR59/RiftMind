@@ -55,3 +55,6 @@ bin/
 /nbbuild/
 /nbdist/
 .vscode/
+
+# --- Copie locale des images du jeu (assets.directory, lancement depuis l'IDE) ---
+data/

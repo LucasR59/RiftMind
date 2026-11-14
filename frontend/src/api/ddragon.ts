@@ -1,8 +1,9 @@
 // Data Dragon : données statiques de League of Legends (champions, objets, sorts, runes) et leurs images.
-// Appelé directement par le navigateur : ce n'est pas l'API Riot (pas de clé), et le CORS est ouvert.
+// Servies par le backend, qui en garde une copie locale (/api/assets/ddragon/…, mêmes chemins que Data Dragon) : le
+// navigateur ne contacte jamais les CDN de Riot, et tout vient du domaine du site (README, « Images du jeu »).
 // Documentation : https://developer.riotgames.com/docs/lol#data-dragon
 
-export const DDRAGON_BASE_URL = 'https://ddragon.leagueoflegends.com'
+export const DDRAGON_BASE_URL = '/api/assets/ddragon'
 export const DDRAGON_LOCALE = 'fr_FR'
 
 /** Champion, indexé par sa `key` numérique (le `championId` des matchs). */
@@ -56,9 +57,9 @@ async function getJson<T>(url: string): Promise<T> {
   return (await response.json()) as T
 }
 
-/** Dernière version de Data Dragon, ex. `16.21.1`. */
+/** Dernière version de Data Dragon copiée par le backend, ex. `16.21.1`. */
 export async function fetchLatestVersion(): Promise<string> {
-  const versions = await getJson<string[]>(`${DDRAGON_BASE_URL}/api/versions.json`)
+  const versions = await getJson<string[]>(`${DDRAGON_BASE_URL}/versions.json`)
   const latest = versions[0]
   if (!latest) {
     throw new Error('Data Dragon : liste des versions vide')

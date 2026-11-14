@@ -36,7 +36,7 @@ describe('RankCards', () => {
     expect(solo?.find('[data-testid="rank-winrate"]').classes()).toContain(
       'rank-card__winrate--good',
     )
-    expect(solo?.find('img').attributes('src')).toContain('ranked-mini-crests/challenger.svg')
+    expect(solo?.find('img').attributes('src')).toBe('/api/assets/ranks/challenger.png')
   })
 
   it('affiche « Non classé » pour une file sans rang', () => {
@@ -44,7 +44,7 @@ describe('RankCards', () => {
 
     expect(flexCard?.text()).toContain('Non classé')
     expect(flexCard?.classes()).toContain('rank-card--unranked')
-    expect(flexCard?.find('img').attributes('src')).toContain('ranked-mini-crests/unranked.svg')
+    expect(flexCard?.find('img').attributes('src')).toBe('/api/assets/ranks/unranked.png')
   })
 
   it('un joueur non classé a deux cartes « Non classé », sans erreur', () => {

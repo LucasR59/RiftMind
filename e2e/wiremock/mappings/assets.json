@@ -1,0 +1,58 @@
+{
+  "mappings": [
+    {
+      "name": "Faux Data Dragon : une seule version, 16.21.1",
+      "request": { "method": "GET", "urlPath": "/ddragon/api/versions.json" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "assets/ddragon/api/versions.json"
+      }
+    },
+    {
+      "name": "Faux Data Dragon : champions de la partie de test",
+      "request": { "method": "GET", "urlPath": "/ddragon/cdn/16.21.1/data/fr_FR/champion.json" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "assets/ddragon/cdn/16.21.1/data/fr_FR/champion.json"
+      }
+    },
+    {
+      "name": "Faux Data Dragon : objets de la partie de test",
+      "request": { "method": "GET", "urlPath": "/ddragon/cdn/16.21.1/data/fr_FR/item.json" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "assets/ddragon/cdn/16.21.1/data/fr_FR/item.json"
+      }
+    },
+    {
+      "name": "Faux Data Dragon : sorts d'invocateur de la partie de test",
+      "request": { "method": "GET", "urlPath": "/ddragon/cdn/16.21.1/data/fr_FR/summoner.json" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "assets/ddragon/cdn/16.21.1/data/fr_FR/summoner.json"
+      }
+    },
+    {
+      "name": "Faux Data Dragon : runes de la partie de test",
+      "request": { "method": "GET", "urlPath": "/ddragon/cdn/16.21.1/data/fr_FR/runesReforged.json" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "bodyFileName": "assets/ddragon/cdn/16.21.1/data/fr_FR/runesReforged.json"
+      }
+    },
+    {
+      "name": "Faux Data Dragon : la même petite image pour tout PNG",
+      "request": { "method": "GET", "urlPathPattern": "/ddragon/.+\\.png" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "image/png" },
+        "bodyFileName": "assets/icon.png"
+      }
+    }
+  ]
+}

@@ -22,7 +22,8 @@ export const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
 export const CACHE_PREFIX = `riftmind:ddragon:${DDRAGON_LOCALE}:`
 
 /**
- * Données statiques de Data Dragon : champions, objets, sorts, runes, et URL de leurs images.
+ * Données statiques de Data Dragon : champions, objets, sorts, runes, et URL de leurs images. Tout vient de la copie
+ * locale du backend (`/api/assets/ddragon`), qui ne publie une nouvelle version qu'une fois toutes ses images copiées.
  *
  * <p>`load()` demande la dernière version à chaque démarrage (un petit fichier), puis prend les données dans
  * `localStorage` si cette version y est déjà, sinon les télécharge et remplace l'ancienne version en cache. Si Data
