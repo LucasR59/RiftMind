@@ -2,10 +2,11 @@
 import { RouterView } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
-import { useStaticDataStore } from '@/stores/staticData'
+import { useDataDragonUpdates } from '@/composables/useDataDragonUpdates'
 
-// Données Data Dragon (champions, objets…) : chargées dès le démarrage, depuis le cache si la version n'a pas changé
-void useStaticDataStore().load()
+// Données Data Dragon (champions, objets…) : chargées dès le démarrage (depuis le cache si la version n'a pas
+// changé), puis mises à jour si un nouveau patch sort pendant que le site est ouvert
+useDataDragonUpdates()
 </script>
 
 <template>
