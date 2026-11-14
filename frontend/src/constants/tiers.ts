@@ -1,8 +1,8 @@
-// Paliers classés : nom français et images (CommunityDragon, miroir des fichiers du client : Data Dragon ne fournit
-// pas les emblèmes de rang).
+// Paliers classés : nom français et images. Data Dragon ne fournit pas les emblèmes de rang : ce sont les emblèmes
+// officiels de Riot, livrés avec le backend et servis depuis le site, comme Data Dragon (api/ddragon.ts).
 
-export const COMMUNITY_DRAGON_IMAGES =
-  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images'
+/** Emblèmes de rang servis par le backend : `/api/assets/ranks/{palier}.png`. */
+export const TIER_IMAGES_URL = '/api/assets/ranks'
 
 /** Nom français des paliers, du plus bas au plus haut. */
 export const TIER_LABELS: Readonly<Record<string, string>> = {
@@ -32,12 +32,9 @@ export function formatRank(tier: string | null | undefined, rank?: string | null
 }
 
 /**
- * Image d'un palier. `crest` : petit blason SVG (~2 Ko), tous paliers et « non classé ». `emblem` : grand emblème
- * PNG (30 à 230 Ko), pour les cartes de rang ; il n'existe pas pour « non classé » (on garde alors le blason).
+ * Emblème d'un palier (PNG carré de 128 px, ~20 Ko), ou l'emblème « non classé » si `tier` est vide. Un palier inconnu
+ * (ajouté par Riot depuis) n'a pas d'image : `GameImage` affiche alors un emplacement vide.
  */
-export function tierImageUrl(tier: string | null | undefined, variant: 'crest' | 'emblem'): string {
-  const name = (tier || 'unranked').toLowerCase()
-  return variant === 'emblem' && tier
-    ? `${COMMUNITY_DRAGON_IMAGES}/ranked-emblem/emblem-${name}.png`
-    : `${COMMUNITY_DRAGON_IMAGES}/ranked-mini-crests/${name}.svg`
+export function tierImageUrl(tier: string | null | undefined): string {
+  return `${TIER_IMAGES_URL}/${(tier || 'unranked').toLowerCase()}.png`
 }

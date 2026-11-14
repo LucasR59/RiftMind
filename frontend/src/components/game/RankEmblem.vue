@@ -4,25 +4,21 @@ import { computed } from 'vue'
 import GameImage from '@/components/game/GameImage.vue'
 import { formatRank, tierImageUrl } from '@/constants/tiers'
 
-/**
- * Emblème d'un palier classé (CommunityDragon). `tier` vide : « Non classé ». `crest` (défaut) : petit blason SVG ;
- * `emblem` : grand emblème pour les cartes de rang.
- */
+/** Emblème d'un palier classé (emblèmes officiels de Riot, servis par le backend). `tier` vide : « Non classé ». */
 const props = withDefaults(
   defineProps<{
     tier?: string | null
     /** Division (I à IV), pour le texte alternatif et le libellé */
     rank?: string | null
     size?: number
-    variant?: 'crest' | 'emblem'
     /** Affiche le rang en texte à côté de l'image */
     showLabel?: boolean
   }>(),
-  { tier: null, rank: null, size: 48, variant: 'crest', showLabel: false },
+  { tier: null, rank: null, size: 48, showLabel: false },
 )
 
 const label = computed(() => formatRank(props.tier, props.rank))
-const src = computed(() => tierImageUrl(props.tier, props.variant))
+const src = computed(() => tierImageUrl(props.tier))
 </script>
 
 <template>

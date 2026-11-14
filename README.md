@@ -20,6 +20,8 @@ RiftMind/
 ├── .env.example                         # Variables de compose.yaml (copier en .env)
 ├── e2e/                                 # Tests de bout en bout : fausse API Riot WireMock (voir son README)
 ├── scripts/riot-fixtures.mjs            # Régénère les réponses Riot de test (backend/src/test/resources/riot/)
+├── scripts/asset-fixtures.mjs           # Régénère le faux Data Dragon de test (backend/src/test/resources/assets/)
+├── scripts/RankImages.java              # Régénère les emblèmes de rang (backend/src/main/resources/assets/ranks/)
 ├── backend/
 │   ├── Dockerfile.dev                   # Image de dev (code monté en volume, debug sur 5005)
 │   ├── mvnw / mvnw.cmd                  # Maven Wrapper (pas besoin d'installer Maven)
@@ -28,6 +30,7 @@ RiftMind/
 │       ├── main/
 │       │   ├── java/com/riftmind/backend/
 │       │   │   ├── RiftMindApplication.java
+│       │   │   ├── assets/              # Copie locale des images du jeu (Data Dragon), servie sous /api/assets
 │       │   │   ├── config/              # Configuration Spring (CORS, sécurité, beans...)
 │       │   │   ├── controller/          # Contrôleurs REST exposés sous /api
 │       │   │   ├── dto/                 # Objets échangés avec le front (records)
@@ -48,7 +51,8 @@ RiftMind/
 │       │   ├── controller/                      # Tests @WebMvcTest
 │       │   ├── db/                              # Tests des migrations Flyway (vrai PostgreSQL)
 │       │   └── riot/                            # Client Riot ; RiotFixtures lit les réponses de test
-│       └── test/resources/riot/                 # Vraies réponses Riot anonymisées (voir son README)
+│       ├── test/resources/riot/                 # Vraies réponses Riot anonymisées (voir son README)
+│       └── test/resources/assets/               # Faux Data Dragon : extraits des vrais fichiers (voir son README)
 └── frontend/
     ├── Dockerfile.dev                   # Image de dev (Vite avec hot reload)
     ├── .env.example                     # Variables Vite (copier en .env.local)
@@ -165,6 +169,43 @@ avec une base PostgreSQL éphémère via Testcontainers.
 
 Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur le backend.
 
+## Images du jeu
+
+Le navigateur ne charge **rien** depuis les CDN de Riot. Le backend garde une **copie locale** de Data Dragon
+(champions, objets, sorts, runes, icônes de profil, et les données en français). Il la sert sous `/api/assets/`,
+avec les mêmes chemins que Data Dragon : `/api/assets/ddragon/cdn/16.22.1/img/champion/Kalista.png`.
+Code : package `backend/.../assets/`.
+
+- **Emblèmes de rang** : Data Dragon ne les fournit pas. Ce sont les emblèmes officiels de Riot (« Ranked Emblems
+  Latest »), livrés avec le backend (`backend/src/main/resources/assets/ranks/`) et servis sous
+  `/api/assets/ranks/{palier}.png` : aucun téléchargement, donc toujours disponibles. Marges retirées, 128 px, ~20 Ko
+  chacun (contre 200 à 700 Ko pour l'original). « Non classé » est l'emblème Fer en gris. Ils changent très rarement
+  (dernière refonte en 2023) ; pour les régénérer : `java scripts/RankImages.java` (télécharge le zip de Riot, 64 Mo).
+
+- **Mise à jour** : au démarrage, puis toutes les heures (`assets.sync-interval`). Une nouvelle version n'est
+  publiée (listée dans `/api/assets/ddragon/versions.json`) **qu'une fois toutes ses images copiées** : environ
+  1 100 fichiers, 12 Mo, une minute. Tant qu'elle ne l'est pas, le site sert la précédente. Si Data Dragon est en
+  panne, rien ne change pour les visiteurs.
+- **Icônes de profil** : il y en a des milliers. Chacune est copiée la première fois qu'on la demande, puis servie
+  depuis le disque.
+- **Disque** : `assets.directory` (`ASSETS_DIR`). Dans Docker, c'est le volume `game-assets` ; depuis l'IDE,
+  `backend/data/assets/` (non versionné). Les 2 dernières versions sont gardées (`assets.keep-versions`).
+  Supprimer le dossier relance une copie complète au prochain démarrage.
+- **Performances** : tout vient du domaine du site, donc pas de connexion supplémentaire à ouvrir. Les fichiers
+  versionnés sont gardés un an par le navigateur (`immutable`), les autres un jour puis revalidés (304). Le JSON est
+  compressé en gzip.
+- **Sécurité** :
+  - seuls les chemins d'une liste blanche sont servis (`AssetPath`), et rien ne peut sortir du dossier ;
+  - les hôtes contactés sont fixés par la configuration, jamais par la requête, et les redirections sont refusées ;
+  - chaque fichier est vérifié avant d'être enregistré : taille maximale, signature PNG, JSON lisible ;
+  - les réponses ont `Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff` et
+    `Cross-Origin-Resource-Policy: same-origin` (un autre site ne peut pas utiliser notre bande passante) ;
+  - les icônes copiées à la demande sont limitées à 4 téléchargements simultanés, une seule fois chacune, et une
+    icône inexistante n'est pas redemandée avant 1 h.
+
+Au démarrage, les logs indiquent la copie :
+`Data Dragon 16.22.1 copié et publié en 43 s : 1137 fichiers (12500 Ko)`.
+
 ## Endpoints de l'API RiftMind
 
 | Méthode et URL | Rôle |
@@ -176,6 +217,7 @@ Ouvrir http://localhost:5173 — la page d'accueil appelle `GET /api/ping` sur l
 | `GET /api/players/{puuid}/matches?page=0&size=10&queue=420` | Historique paginé (du plus récent au plus ancien), lu en base. `queue` facultatif, `size` de 1 à 50 |
 | `GET /api/players/{puuid}/champions?queue=420` | Stats par champion (parties, winrate, KDA, CS/min, dégâts), hors remakes. `queue` facultatif |
 | `GET /api/players/{puuid}/summary` | Résumé des 20 dernières parties hors remakes : winrate, KDA moyen, rôles joués |
+| `GET /api/assets/ddragon/…`, `/api/assets/ranks/…` | Images et données du jeu, depuis la copie locale (voir « Images du jeu »). 404 hors liste blanche |
 
 - `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.
 - `gameName` et `tagLine` sont encodés dans l'URL (`%20` pour un espace), et la casse est ignorée.

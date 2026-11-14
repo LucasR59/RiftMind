@@ -25,6 +25,9 @@ jobs:
       RIOT_API_KEY: RGAPI-ci-placeholder-not-a-real-key
       # Fausse API Riot : tous les appels du backend partent vers WireMock
       RIOT_BASE_URL: http://wiremock:8080
+      # Faux Data Dragon : le backend copie ses images depuis WireMock
+      ASSETS_DDRAGON_URL: http://wiremock:8080/ddragon
+      ASSETS_DIR: /data/assets/e2e
     steps:
       - uses: actions/checkout@v7
 
@@ -74,6 +77,37 @@ jobs:
           code=$(curl -s -o unknown.json -w '%{http_code}' "$api/players/euw1/Inconnu/EUW")
           test "$code" = 404
           jq -e '.code == "NOT_FOUND"' unknown.json
+
+      - name: Vérifier les images du jeu (front -> back -> copie locale du faux Data Dragon)
+        run: |
+          set -euo pipefail
+          assets=http://localhost:5173/api/assets
+          # La copie démarre avec le backend : attendre que la version soit publiée
+          for i in $(seq 1 30); do
+            curl -sf "$assets/ddragon/versions.json" | jq -e '. == ["16.21.1"]' > /dev/null && break
+            sleep 2
+          done
+          curl -sf "$assets/ddragon/versions.json" | jq -e '. == ["16.21.1"]'
+          curl -sf "$assets/ddragon/cdn/16.21.1/data/fr_FR/champion.json" | jq -e '.data.Kalista.name == "Kalista"'
+          # Image versionnée : type fixé par le backend, cache d'un an, en-têtes de sécurité
+          headers=$(curl -sf -D - -o /dev/null "$assets/ddragon/cdn/16.21.1/img/champion/Kalista.png")
+          echo "$headers"
+          echo "$headers" | grep -qi '^content-type: image/png'
+          echo "$headers" | grep -qi '^cache-control: .*immutable'
+          echo "$headers" | grep -qi '^x-content-type-options: nosniff'
+          echo "$headers" | grep -qi '^content-security-policy: .*sandbox'
+          # Emblèmes de rang, livrés avec le backend
+          curl -sf -D - -o /dev/null "$assets/ranks/silver.png" | grep -qi "^content-type: image/png"
+          curl -sf -o /dev/null "$assets/ranks/unranked.png"
+          # Icône de profil : copiée à la première demande
+          curl -sf -o /dev/null "$assets/ddragon/cdn/16.21.1/img/profileicon/7.png"
+          # Hors de la liste blanche : jamais servi
+          for path in ddragon/cdn/16.21.1/.complete "ddragon/cdn/16.21.1/img/champion/..%2F..%2F.complete" \
+                      ddragon/cdn/16.21.1/data/fr_FR/profileicon.json; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --path-as-is "$assets/$path")
+            echo "$path -> $code"
+            test "$code" != 200
+          done
 
       - name: Vérifier les migrations Flyway
         run: |

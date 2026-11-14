@@ -23,6 +23,9 @@ jobs:
       # Fausse clé : tous les appels partent vers WireMock, jamais vers Riot
       RIOT_API_KEY: RGAPI-ci-placeholder-not-a-real-key
       RIOT_BASE_URL: http://wiremock:8080
+      # Faux Data Dragon : le backend copie ses images depuis WireMock
+      ASSETS_DDRAGON_URL: http://wiremock:8080/ddragon
+      ASSETS_DIR: /data/assets/e2e
     steps:
       - uses: actions/checkout@v7
 
@@ -50,7 +53,12 @@ jobs:
             sleep 5
           done
           for i in $(seq 1 30); do
-            curl -sf http://localhost:5173/api/ping | grep -q '"status":"ok"' && exit 0
+            curl -sf http://localhost:5173/api/ping | grep -q '"status":"ok"' && break
+            sleep 2
+          done
+          # Copie des images du jeu, lancée au démarrage du backend : attendre que la version soit publiée
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173/api/assets/ddragon/versions.json | grep -q '16.21.1' && exit 0
             sleep 2
           done
           echo "La pile n'a pas démarré à temps"; exit 1

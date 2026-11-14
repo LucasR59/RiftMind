@@ -151,6 +151,9 @@ Méthode de vérification : pour chaque plateforme, un joueur Challenger a été
 - Liste des versions : https://ddragon.leagueoflegends.com/api/versions.json. Toujours utiliser la plus récente.
 - Données en français : `https://ddragon.leagueoflegends.com/cdn/{version}/data/fr_FR/champion.json` (et aussi `item.json`, `summoner.json`, `runesReforged.json`, `profileicon.json`).
 - Images : `https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{id}.png`.
+- Un fichier qui n'existe pas répond **403** (et non 404).
+- **RiftMind n'appelle pas Data Dragon depuis le navigateur.** Le backend en garde une copie locale, servie sous `/api/assets/ddragon/` (tâche 8.5, README « Images du jeu »). Riot distribue Data Dragon pour qu'on le télécharge (archives `dragontail`) : en garder une copie est prévu. Une version compte ~1 100 images (12 Mo).
+- **Emblèmes de rang** : Data Dragon n'en a pas. Source officielle : le zip « Ranked Emblems Latest » de Riot (`https://static.developer.riotgames.com/docs/lol/ranked-emblems-latest.zip`, 64 Mo, art actuel avec Émeraude). L'ancien `ranked-emblems.zip` date de 2019 (pas d'Émeraude). RiftMind en livre une version réduite avec le backend (`scripts/RankImages.java`). CommunityDragon (`raw.communitydragon.org`) n'est pas utilisé : ~20 s par fichier, et `ranked-mini-crests/silver.svg` répond 522 (vérifié le 2026-11-14).
 - ⚠️ Data Dragon est mis à jour **à la main, avec parfois du retard après un patch**. Il faut prévoir une image de remplacement si un nouveau champion ou objet n'est pas encore présent.
 
 ## 6. Conséquences sur la roadmap

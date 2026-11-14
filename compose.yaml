@@ -10,6 +10,8 @@
 #
 #   Tests de bout en bout, avec une fausse API Riot (WireMock) au lieu de la vraie :
 #   RIOT_BASE_URL=http://wiremock:8080 docker compose --profile e2e up -d
+#   (et ASSETS_DDRAGON_URL=http://wiremock:8080/ddragon pour un faux
+#   Data Dragon : voir e2e/README.md)
 #
 # Les valeurs par défaut peuvent être surchargées dans un fichier .env (voir .env.example).
 # =============================================================
@@ -46,12 +48,18 @@ services:
       RIOT_API_KEY: ${RIOT_API_KEY:-}
       # Fausse API Riot (profil e2e) : http://wiremock:8080. Vide : la vraie API Riot
       RIOT_BASE_URL: ${RIOT_BASE_URL:-}
+      # Copie locale des images du jeu (Data Dragon, emblèmes de rang), servie sous /api/assets/ : volume dédié.
+      # Tests de bout en bout : /data/assets/e2e, pour ne pas mélanger les fausses images avec la vraie copie
+      ASSETS_DIR: ${ASSETS_DIR:-/data/assets}
+      # Faux Data Dragon (profil e2e) : http://wiremock:8080/ddragon. Vide : le vrai
+      ASSETS_DDRAGON_URL: ${ASSETS_DDRAGON_URL:-}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
       - "${BACKEND_DEBUG_PORT:-5005}:5005" # debug distant (JDWP) depuis l'IDE
     volumes:
       - ./backend:/app
       - maven-repo:/root/.m2 # cache des dépendances Maven entre deux démarrages
+      - game-assets:/data/assets # copie locale des images du jeu, gardée entre deux démarrages
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,14 +94,18 @@ services:
   wiremock:
     image: wiremock/wiremock:3.13.1
     profiles: [e2e]
-    command: ["--disable-banner", "--global-response-templating=false"]
+    # Pas de « --global-response-templating=false » : WireMock ignore « =false » et active alors les gabarits pour
+    # toutes les réponses, ce qui abîme les images (lues comme du texte). Par défaut, seuls les stubs qui le demandent.
+    command: ["--disable-banner"]
     ports:
       - "${WIREMOCK_PORT:-8089}:8080"
     volumes:
       - ./e2e/wiremock/mappings:/home/wiremock/mappings:ro
       - ./backend/src/test/resources/riot:/home/wiremock/__files/riot:ro
+      - ./backend/src/test/resources/assets:/home/wiremock/__files/assets:ro
 
 volumes:
   postgres-data:
   maven-repo:
+  game-assets:
   frontend-node-modules:
