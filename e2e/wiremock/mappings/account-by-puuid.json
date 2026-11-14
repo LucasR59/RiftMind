@@ -1,0 +1,16 @@
+{
+  "name": "Account-V1 par PUUID (bouton « Mettre à jour »)",
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/europe\\.api\\.riotgames\\.com/riot/account/v1/accounts/by-puuid/RiftMindTestPuuid01_0000000000000000000000000000000000000000000000000000000000"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "X-App-Rate-Limit-Count": "1:1,1:120"
+    },
+    "bodyFileName": "riot/account.json"
+  }
+}

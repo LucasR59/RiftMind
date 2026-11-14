@@ -1,0 +1,16 @@
+{
+  "name": "Summoner-V4 du joueur de test, sur EUW seulement",
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/euw1\\.api\\.riotgames\\.com/lol/summoner/v4/summoners/by-puuid/RiftMindTestPuuid01_0000000000000000000000000000000000000000000000000000000000"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "X-App-Rate-Limit-Count": "1:1,1:120"
+    },
+    "bodyFileName": "riot/summoner.json"
+  }
+}

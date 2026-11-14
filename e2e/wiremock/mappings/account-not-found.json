@@ -1,0 +1,15 @@
+{
+  "name": "Account-V1 : tout autre Riot ID est inconnu (404)",
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/(americas|asia|europe)\\.api\\.riotgames\\.com/riot/account/v1/accounts/by-riot-id/.+"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "riot/account-not-found.json"
+  }
+}

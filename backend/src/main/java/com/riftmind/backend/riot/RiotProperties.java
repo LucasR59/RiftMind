@@ -3,6 +3,7 @@ package com.riftmind.backend.riot;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
@@ -29,6 +30,10 @@ import jakarta.validation.constraints.Positive;
  * @param refreshCooldown délai minimum entre deux mises à jour d'un même joueur
  * @param connectTimeout  délai maximum pour se connecter à un serveur Riot
  * @param readTimeout     délai maximum d'attente de la réponse de Riot
+ * @param baseUrl         adresse de remplacement de l'API Riot, pour les tests de bout en bout (fausse API WireMock,
+ *                        variable d'environnement {@code RIOT_BASE_URL}). Vide (défaut) : la vraie API,
+ *                        {@code https://{hôte}}. Renseignée, ex. {@code http://wiremock:8080} : chaque appel part vers
+ *                        {@code http://wiremock:8080/{hôte}{chemin}}, l'hôte Riot devenant le premier segment du chemin
  */
 @Validated
 @ConfigurationProperties("riot")
@@ -38,7 +43,20 @@ public record RiotProperties(
         @Valid @DefaultValue RateLimit rateLimit,
         @NotNull @DefaultValue("2m") Duration refreshCooldown,
         @NotNull @DefaultValue("5s") Duration connectTimeout,
-        @NotNull @DefaultValue("10s") Duration readTimeout) {
+        @NotNull @DefaultValue("10s") Duration readTimeout,
+        String baseUrl) {
+
+    /** Constructeur utilisé par Spring : une adresse vide revient à la vraie API Riot. */
+    @ConstructorBinding
+    public RiotProperties {
+        baseUrl = baseUrl == null || baseUrl.isBlank() ? null : baseUrl.strip().replaceAll("/+$", "");
+    }
+
+    /** Configuration vers la vraie API Riot (sans {@code baseUrl}). */
+    public RiotProperties(String apiKey, RateLimit rateLimit, Duration refreshCooldown, Duration connectTimeout,
+            Duration readTimeout) {
+        this(apiKey, rateLimit, refreshCooldown, connectTimeout, readTimeout, null);
+    }
 
     /**
      * Limites de requêtes, appliquées séparément à chaque hôte Riot (voir {@link RiotRateLimiter}).
@@ -93,7 +111,7 @@ public record RiotProperties(
     public String toString() {
         return "RiotProperties[apiKey=" + maskedApiKey() + ", rateLimit=" + rateLimit
                 + ", refreshCooldown=" + refreshCooldown + ", connectTimeout=" + connectTimeout
-                + ", readTimeout=" + readTimeout + "]";
+                + ", readTimeout=" + readTimeout + (baseUrl != null ? ", baseUrl=" + baseUrl : "") + "]";
     }
 
     /** Version masquée de la clé, utilisable dans les logs : {@code RGAPI-****…(42 caractères)}. */

@@ -18,6 +18,7 @@ Monorepo contenant :
 RiftMind/
 ├── compose.yaml                         # Stack de dev : postgres, backend, frontend, adminer
 ├── .env.example                         # Variables de compose.yaml (copier en .env)
+├── e2e/                                 # Tests de bout en bout : fausse API Riot WireMock (voir son README)
 ├── scripts/riot-fixtures.mjs            # Régénère les réponses Riot de test (backend/src/test/resources/riot/)
 ├── backend/
 │   ├── Dockerfile.dev                   # Image de dev (code monté en volume, debug sur 5005)
@@ -116,6 +117,7 @@ Ils utilisent de vraies réponses Riot anonymisées (`src/test/resources/riot/`,
 Un test qui écrit en base **sans** transaction de test (`@Transactional(propagation = NOT_SUPPORTED)`) doit porter `@CleanDatabase` :
 la base PostgreSQL est partagée entre les classes de test, et leur ordre diffère entre Windows et la CI (Linux).
 Pour vérifier en local : `./mvnw verify -Dsurefire.runOrder=reversealphabetical`.
+Tests de bout en bout (Playwright, avec une fausse API Riot WireMock) : voir [e2e/README.md](e2e/README.md).
 
 ### Option 1 — tout dans Docker
 

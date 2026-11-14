@@ -49,6 +49,8 @@ public class RiotClient {
 
     private final RestClient restClient;
     private final RiotRateLimiter rateLimiter;
+    /** Adresse de remplacement (fausse API des tests de bout en bout), ou {@code null} pour la vraie API. */
+    private final String baseUrl;
 
     /**
      * @param builder     builder fourni par Spring Boot (timeouts déjà configurés dans {@link RiotClientConfiguration}),
@@ -58,16 +60,17 @@ public class RiotClient {
      */
     public RiotClient(RestClient.Builder builder, RiotProperties properties, RiotRateLimiter rateLimiter) {
         this.rateLimiter = rateLimiter;
+        this.baseUrl = properties.baseUrl();
         this.restClient = builder
                 .defaultHeader(API_KEY_HEADER, properties.apiKey())
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .requestInterceptor((request, body, execution) -> {
                     ClientHttpResponse response = execution.execute(request, body);
-                    onResponse(request.getURI(), response);
+                    onResponse(riotHost(request.getURI()), request.getURI(), response);
                     return response;
                 })
                 .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
-                    throw toException(request.getURI().getHost(), response);
+                    throw toException(riotHost(request.getURI()), response);
                 })
                 .build();
     }
@@ -102,7 +105,7 @@ public class RiotClient {
         try (RiotRateLimiter.Permit permit = rateLimiter.acquire(host)) {
             // L'hôte provient des enums Platform/RegionalRoute (jamais d'une saisie utilisateur)
             return extractor.apply(restClient.get()
-                    .uri("https://" + host + pathTemplate, uriVariables)
+                    .uri(urlOf(host) + pathTemplate, uriVariables)
                     .retrieve());
         } catch (ResourceAccessException e) {
             // Timeout, connexion refusée, DNS… : Riot n'a pas répondu
@@ -110,8 +113,26 @@ public class RiotClient {
         }
     }
 
+    /** Début de l'URL d'un hôte Riot : {@code https://euw1.api.riotgames.com}, ou {@code {baseUrl}/euw1.api.riotgames.com}. */
+    private String urlOf(String host) {
+        return baseUrl == null ? "https://" + host : baseUrl + "/" + host;
+    }
+
+    /**
+     * Hôte Riot d'une requête : celui de l'URL, ou le premier segment du chemin avec une adresse de remplacement. C'est
+     * lui qui sert de clé au limiteur de requêtes et aux messages d'erreur.
+     */
+    private String riotHost(URI uri) {
+        if (baseUrl == null) {
+            return uri.getHost();
+        }
+        String path = uri.getRawPath().substring(URI.create(baseUrl).getRawPath().length());
+        String[] segments = path.split("/", 3);
+        return segments.length > 1 ? segments[1] : uri.getHost();
+    }
+
     /** Logue les compteurs de Riot et, sur un 429, bloque l'hôte pendant {@code Retry-After}. */
-    private void onResponse(URI uri, ClientHttpResponse response) throws IOException {
+    private void onResponse(String host, URI uri, ClientHttpResponse response) throws IOException {
         int status = response.getStatusCode().value();
         HttpHeaders headers = response.getHeaders();
         String appCount = headers.getFirst(APP_RATE_LIMIT_COUNT_HEADER);
@@ -121,14 +142,14 @@ public class RiotClient {
             if (retryAfter == null) {
                 retryAfter = RiotRateLimitException.DEFAULT_RETRY_AFTER;
             }
-            rateLimiter.blockHost(uri.getHost(), retryAfter);
+            rateLimiter.blockHost(host, retryAfter);
             String limitType = headers.getFirst(RATE_LIMIT_TYPE_HEADER);
             log.warn("Riot a répondu 429 sur {} (type : {}) : appels bloqués pendant {} s. Compteurs : app {}, méthode {}",
-                    uri.getHost(), limitType != null ? limitType : "service", retryAfter.toSeconds(),
+                    host, limitType != null ? limitType : "service", retryAfter.toSeconds(),
                     appCount, methodCount);
         } else {
             log.debug("Riot {}{} -> {} · compteurs : app {}, méthode {}",
-                    uri.getHost(), uri.getRawPath(), status, appCount, methodCount);
+                    host, uri.getRawPath(), status, appCount, methodCount);
         }
     }
 

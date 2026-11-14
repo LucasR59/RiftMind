@@ -8,6 +8,9 @@
 #   docker compose --profile tools down    # stoppe tout, Adminer compris (garde les données)
 #   docker compose --profile tools down -v # stoppe et supprime les volumes (reset BDD)
 #
+#   Tests de bout en bout, avec une fausse API Riot (WireMock) au lieu de la vraie :
+#   RIOT_BASE_URL=http://wiremock:8080 docker compose --profile e2e up -d
+#
 # Les valeurs par défaut peuvent être surchargées dans un fichier .env (voir .env.example).
 # =============================================================
 name: riftmind
@@ -41,6 +44,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-riftmind}
       # Clé API Riot lue depuis .env (vide par défaut pour que la CI démarre sans clé)
       RIOT_API_KEY: ${RIOT_API_KEY:-}
+      # Fausse API Riot (profil e2e) : http://wiremock:8080. Vide : la vraie API Riot
+      RIOT_BASE_URL: ${RIOT_BASE_URL:-}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
       - "${BACKEND_DEBUG_PORT:-5005}:5005" # debug distant (JDWP) depuis l'IDE
@@ -75,6 +80,18 @@ services:
       - "${ADMINER_PORT:-8081}:8080"
     depends_on:
       - postgres
+
+  # Fausse API Riot pour les tests de bout en bout (e2e/README.md). Elle sert les vraies réponses anonymisées des
+  # tests du backend : un seul jeu de données pour les tests unitaires et les tests de bout en bout.
+  wiremock:
+    image: wiremock/wiremock:3.13.1
+    profiles: [e2e]
+    command: ["--disable-banner", "--global-response-templating=false"]
+    ports:
+      - "${WIREMOCK_PORT:-8089}:8080"
+    volumes:
+      - ./e2e/wiremock/mappings:/home/wiremock/mappings:ro
+      - ./backend/src/test/resources/riot:/home/wiremock/__files/riot:ro
 
 volumes:
   postgres-data:
