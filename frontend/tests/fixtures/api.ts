@@ -7,7 +7,7 @@ import type {
   MatchSummary,
   Participant,
 } from '@/types/match'
-import type { Player } from '@/types/player'
+import type { Player, RankHistory } from '@/types/player'
 import type { ChampionStats, PlayerSummary } from '@/types/stats'
 
 export const PUUID = 'RiftMindTestPuuid01_' + '0'.repeat(58)
@@ -76,6 +76,7 @@ export const matchSummary: MatchSummary = {
   remake: false,
   player: kalista,
   participants: [compactKalista],
+  lpChange: 18,
 }
 
 export const matchPage: MatchPage = { items: [matchSummary], page: 0, size: 10, hasMore: true }
@@ -141,6 +142,52 @@ export const playerSummary: PlayerSummary = {
     { position: 'BOTTOM', games: 15 },
     { position: 'UTILITY', games: 5 },
   ],
+}
+
+/**
+ * Évolution du rang en SoloQ : Or II → Platine IV (peak) → Or I. Scores = LP cumulés depuis Fer IV 0 LP, comme
+ * RankScore côté backend (Or IV 0 LP = 1 200).
+ */
+export const soloHistory: RankHistory = {
+  queueType: 'RANKED_SOLO_5x5',
+  points: [
+    {
+      recordedAt: '2026-10-01T18:00:00Z',
+      tier: 'GOLD',
+      rank: 'II',
+      leaguePoints: 45,
+      wins: 10,
+      losses: 8,
+      score: 1445,
+    },
+    {
+      recordedAt: '2026-10-05T20:30:00Z',
+      tier: 'PLATINUM',
+      rank: 'IV',
+      leaguePoints: 12,
+      wins: 15,
+      losses: 9,
+      score: 1612,
+    },
+    {
+      recordedAt: '2026-10-09T21:00:00Z',
+      tier: 'GOLD',
+      rank: 'I',
+      leaguePoints: 80,
+      wins: 16,
+      losses: 12,
+      score: 1580,
+    },
+  ],
+  peak: {
+    recordedAt: '2026-10-05T20:30:00Z',
+    tier: 'PLATINUM',
+    rank: 'IV',
+    leaguePoints: 12,
+    wins: 15,
+    losses: 9,
+    score: 1612,
+  },
 }
 
 /** Réponse JSON comme celles de `fetch`. Les erreurs sont en `application/problem+json`. */

@@ -1,7 +1,11 @@
 package com.riftmind.backend.service;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -22,9 +26,12 @@ import com.riftmind.backend.exception.MatchNotFoundException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.MatchHeader;
 import com.riftmind.backend.model.MatchParticipant;
+import com.riftmind.backend.model.RankSnapshot;
 import com.riftmind.backend.repository.MatchParticipantRepository;
 import com.riftmind.backend.repository.MatchRepository;
 import com.riftmind.backend.repository.PlayerRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
+import com.riftmind.backend.riot.RankedQueue;
 
 /**
  * Lecture des parties enregistrées (phase 5) : uniquement depuis la base, sans jamais appeler Riot. La réponse brute
@@ -41,15 +48,20 @@ public class MatchQueryService {
     /** Nombre de parties prises en compte par le résumé. */
     public static final int SUMMARY_GAMES = 20;
 
+    /** Durée maximale d'une partie, pour retrouver celles commencées avant le premier relevé de rang. */
+    static final Duration LONGEST_GAME = Duration.ofHours(2);
+
     private final PlayerRepository playerRepository;
     private final MatchRepository matchRepository;
     private final MatchParticipantRepository participantRepository;
+    private final RankSnapshotRepository rankSnapshotRepository;
 
     public MatchQueryService(PlayerRepository playerRepository, MatchRepository matchRepository,
-            MatchParticipantRepository participantRepository) {
+            MatchParticipantRepository participantRepository, RankSnapshotRepository rankSnapshotRepository) {
         this.playerRepository = playerRepository;
         this.matchRepository = matchRepository;
         this.participantRepository = participantRepository;
+        this.rankSnapshotRepository = rankSnapshotRepository;
     }
 
     /**
@@ -91,8 +103,11 @@ public class MatchQueryService {
                 .findByMatchIdInOrderByMatchIdAscParticipantIdAsc(matchIds).stream()
                 .collect(Collectors.groupingBy(MatchParticipant::getMatchId));
 
+        Map<String, Integer> lpChanges = lpChanges(puuid, mine.getContent());
+
         List<MatchSummaryResponse> items = mine.stream()
-                .map(me -> summary(headers.get(me.getMatchId()), me, playersByMatch.get(me.getMatchId())))
+                .map(me -> summary(headers.get(me.getMatchId()), me, playersByMatch.get(me.getMatchId()),
+                        lpChanges.get(me.getMatchId())))
                 .toList();
         return new MatchPageResponse(items, page, size, mine.hasNext());
     }
@@ -141,10 +156,30 @@ public class MatchQueryService {
     }
 
     private static MatchSummaryResponse summary(MatchHeader header, MatchParticipant me,
-            List<MatchParticipant> players) {
+            List<MatchParticipant> players, Integer lpChange) {
         return new MatchSummaryResponse(header.matchId(), header.queueId(), header.gameVersion(), header.gameStart(),
                 header.durationSeconds(), header.remake(), ParticipantResponse.from(me),
-                players.stream().map(CompactParticipantResponse::from).toList());
+                players.stream().map(CompactParticipantResponse::from).toList(), lpChange);
+    }
+
+    /**
+     * Variation de LP des parties classées de la page, quand elle est certaine ({@link LpChanges}). Deux requêtes
+     * seulement si la page contient au moins une partie classée : les rangs relevés du joueur, puis ses parties
+     * classées depuis le premier relevé.
+     */
+    private Map<String, Integer> lpChanges(String puuid, List<MatchParticipant> page) {
+        Set<Integer> rankedQueues = Arrays.stream(RankedQueue.values()).map(RankedQueue::queueId)
+                .collect(Collectors.toSet());
+        if (page.stream().noneMatch(me -> rankedQueues.contains(me.getQueueId()))) {
+            return Map.of();
+        }
+        List<RankSnapshot> snapshots = rankSnapshotRepository.findByPuuidOrderByRecordedAtAscIdAsc(puuid);
+        if (snapshots.size() < 2) {
+            return Map.of();
+        }
+        // Une partie terminée juste après le premier relevé a pu commencer avant lui
+        Instant since = snapshots.getFirst().getRecordedAt().minus(LONGEST_GAME);
+        return LpChanges.attribute(snapshots, participantRepository.findRankedGames(puuid, rankedQueues, since));
     }
 
     private void requireKnownPlayer(String puuid) {

@@ -14,19 +14,26 @@ import java.util.Optional;
 public enum RankedQueue {
 
     /** Classée solo/duo, file 420 de Match-V5. */
-    RANKED_SOLO_5x5("Classée Solo/Duo"),
+    RANKED_SOLO_5x5("Classée Solo/Duo", 420),
     /** Classée flexible, file 440 de Match-V5. */
-    RANKED_FLEX_SR("Classée Flexible");
+    RANKED_FLEX_SR("Classée Flexible", 440);
 
     private final String label;
+    private final int queueId;
 
-    RankedQueue(String label) {
+    RankedQueue(String label, int queueId) {
         this.label = label;
+        this.queueId = queueId;
     }
 
     /** Nom affiché, ex. {@code Classée Solo/Duo}. */
     public String label() {
         return label;
+    }
+
+    /** Numéro de la file dans Match-V5 ({@code queueId} des parties), ex. 420. */
+    public int queueId() {
+        return queueId;
     }
 
     /**

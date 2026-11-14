@@ -24,6 +24,9 @@ test('rechercher un joueur ouvre son profil complet', async ({ page }) => {
   await expect(ranks.first()).toContainText('250V 200D')
   await expect(ranks.nth(1)).toContainText('Non classé')
 
+  // Évolution du rang : le rang de la première recherche est le premier point, donc aussi le peak
+  await expect(ranks.first().getByTestId('rank-peak')).toContainText('Challenger')
+
   // Historique : les 3 parties de la fausse API, récupérées à la première recherche
   const cards = page.getByTestId('match-card')
   await expect(cards).toHaveCount(3)

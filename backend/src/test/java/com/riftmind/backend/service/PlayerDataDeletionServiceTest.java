@@ -17,10 +17,12 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.model.LeagueEntry;
+import com.riftmind.backend.model.RankSnapshot;
 import com.riftmind.backend.model.Match;
 import com.riftmind.backend.model.MatchParticipant;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.LeagueEntryRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.repository.MatchParticipantRepository;
 import com.riftmind.backend.repository.MatchRepository;
 import com.riftmind.backend.repository.PlayerRepository;
@@ -54,6 +56,9 @@ class PlayerDataDeletionServiceTest {
     private LeagueEntryRepository leagueEntryRepository;
 
     @Autowired
+    private RankSnapshotRepository rankSnapshotRepository;
+
+    @Autowired
     private MatchRepository matchRepository;
 
     @Autowired
@@ -74,6 +79,11 @@ class PlayerDataDeletionServiceTest {
             playerRepository.save(new Player(puuid, "Joueur", "EUW", Platform.EUW1, 100, 1, T0));
             leagueEntryRepository.save(new LeagueEntry(puuid, RankedQueue.RANKED_SOLO_5x5, "GOLD", "I", 10, 5, 5,
                     false, T0));
+            // Historique des rangs (tâche 7.10) : deux rangs successifs
+            rankSnapshotRepository.save(
+                    new RankSnapshot(puuid, RankedQueue.RANKED_SOLO_5x5, "GOLD", "II", 90, 4, 5, T0));
+            rankSnapshotRepository.save(
+                    new RankSnapshot(puuid, RankedQueue.RANKED_SOLO_5x5, "GOLD", "I", 10, 5, 5, T0));
         }
         // Deux parties du joueur, et une sans lui (son PUUID remplacé par celui d'un inconnu)
         saveMatch("EUW1_7000000001", RiotFixtures.read(RiotFixtures.MATCH));
@@ -97,6 +107,7 @@ class PlayerDataDeletionServiceTest {
         return jdbc.sql("""
                 SELECT (SELECT count(*) FROM player WHERE puuid = :puuid)
                      + (SELECT count(*) FROM league_entry WHERE puuid = :puuid)
+                     + (SELECT count(*) FROM rank_snapshot WHERE puuid = :puuid)
                      + (SELECT count(*) FROM match_participant WHERE puuid = :puuid)
                      + (SELECT count(*) FROM match WHERE raw::text LIKE '%' || :puuid || '%')
                 """).param("puuid", puuid).query(Long.class).single();
@@ -104,7 +115,7 @@ class PlayerDataDeletionServiceTest {
 
     @Test
     void ilNeResteRienEnBasePourCePuuid() {
-        assertThat(rowsMentioning(RiotFixtures.PUUID)).as("avant").isEqualTo(1 + 1 + 2 + 2);
+        assertThat(rowsMentioning(RiotFixtures.PUUID)).as("avant").isEqualTo(1 + 1 + 2 + 2 + 2);
 
         PlayerDataDeletionService.DeletionResult result = service.deleteAllData(RiotFixtures.PUUID);
 
@@ -124,6 +135,7 @@ class PlayerDataDeletionServiceTest {
         // Le coéquipier, lui aussi recherché sur RiftMind, garde tout
         assertThat(playerRepository.existsById(OTHER)).isTrue();
         assertThat(leagueEntryRepository.findByPuuid(OTHER)).hasSize(1);
+        assertThat(rankSnapshotRepository.findByPuuidOrderByRecordedAtAscIdAsc(OTHER)).hasSize(2);
         assertThat(jdbc.sql("SELECT count(*) FROM match_participant WHERE puuid = :puuid").param("puuid", OTHER)
                 .query(Long.class).single()).isEqualTo(3);
     }

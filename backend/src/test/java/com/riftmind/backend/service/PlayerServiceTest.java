@@ -42,6 +42,7 @@ import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.LeagueEntryRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.repository.PlayerRepository;
 import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RankedQueue;
@@ -81,6 +82,9 @@ class PlayerServiceTest {
     private LeagueEntryRepository leagueEntryRepository;
 
     @Autowired
+    private RankSnapshotRepository rankSnapshotRepository;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     private MockRestServiceServer riot;
@@ -99,7 +103,8 @@ class PlayerServiceTest {
                 Duration.ofSeconds(10));
         riotClient = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-        leagueService = new LeagueService(riotClient, leagueEntryRepository, transactionManager, clock);
+        leagueService = new LeagueService(riotClient, leagueEntryRepository, rankSnapshotRepository,
+                transactionManager, clock);
         matchIngestionService = mock(MatchIngestionService.class);
         service = new PlayerService(riotClient, repository, leagueService, matchIngestionService, properties, clock);
     }

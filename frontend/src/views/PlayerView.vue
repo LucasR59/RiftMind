@@ -110,7 +110,7 @@ watch(() => [route.params.platform, route.params.riotId], load, { immediate: tru
       <PlayerHeader :player="player" @refreshed="onRefreshed" />
       <div class="player-page__layout">
         <aside class="player-page__aside">
-          <RankCards :ranks="player.ranks" />
+          <RankCards :ranks="player.ranks" :puuid="player.puuid" :refresh-key="refreshKey" />
           <RecentSummary :puuid="player.puuid" :refresh-key="refreshKey" />
         </aside>
         <div class="player-page__main">

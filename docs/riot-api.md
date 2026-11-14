@@ -131,6 +131,7 @@ Méthode de vérification : pour chaque plateforme, un joueur Challenger a été
 
 ### Interdit
 - **Calculer ou estimer un MMR/ELO**, ou proposer une alternative au classement officiel.
+  → Le graphique d'évolution du rang (tâche 7.10) n'est **pas** un MMR : il trace le rang **officiel** (palier, division, LP) relevé à chaque mise à jour. Le `score` de l'API (LP cumulés depuis Fer IV) sert seulement à placer ces rangs sur l'axe du graphique. Il n'est jamais affiché, et l'interface ne parle jamais de MMR. De même, les « +X LP » des parties sont des différences entre deux rangs officiels relevés, attribuées seulement quand une seule partie les sépare. Ils ne sont jamais estimés, car estimer les LP d'une partie reviendrait à estimer le MMR.
 - **Révéler l'identité de joueurs cachés** par le jeu (par exemple le mode streamer), ou afficher des infos qu'un joueur ne pourrait pas connaître en jeu.
 - **Afficher publiquement l'historique des parties personnalisées** (*custom games*), sauf si le joueur l'accepte explicitement. On les exclut de l'historique (tâche 4.6).
 - **Afficher des winrates d'Augments ou d'objets du mode Arena.**

@@ -73,6 +73,8 @@ jobs:
           curl -sf "$api/players/$puuid/matches" | jq -e '.items | length == 3'
           curl -sf "$api/players/$puuid/summary" | jq -e '.games == 3'
           curl -sf "$api/players/$puuid/champions" | jq -e '.[0].championName == "Kalista"'
+          # Évolution du rang : un premier point en SoloQ, qui est aussi le peak
+          curl -sf "$api/players/$puuid/rank-history" | jq -e '.[0].queueType == "RANKED_SOLO_5x5" and .[0].peak.tier == "CHALLENGER"'
           # Riot ID inconnu : 404 au format RFC 9457
           code=$(curl -s -o unknown.json -w '%{http_code}' "$api/players/euw1/Inconnu/EUW")
           test "$code" = 404

@@ -32,10 +32,13 @@ import com.riftmind.backend.exception.MatchNotFoundException;
 import com.riftmind.backend.exception.PlayerNotFoundException;
 import com.riftmind.backend.model.Match;
 import com.riftmind.backend.model.Player;
+import com.riftmind.backend.model.RankSnapshot;
 import com.riftmind.backend.repository.MatchParticipantRepository;
 import com.riftmind.backend.repository.MatchRepository;
 import com.riftmind.backend.repository.PlayerRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.riot.Platform;
+import com.riftmind.backend.riot.RankedQueue;
 import com.riftmind.backend.riot.RiotFixtures;
 
 /**
@@ -52,6 +55,9 @@ class MatchQueryServiceTest {
 
     @Autowired
     private PlayerRepository playerRepository;
+
+    @Autowired
+    private RankSnapshotRepository rankSnapshotRepository;
 
     @Autowired
     private MatchRepository matchRepository;
@@ -367,5 +373,50 @@ class MatchQueryServiceTest {
     void refuseUnePageOuUneTailleHorsLimites(int page, int size) {
         assertThatThrownBy(() -> service.getHistory(RiotFixtures.PUUID, page, size, null))
                 .isInstanceOf(InvalidRequestException.class);
+    }
+
+    // --- 7.10 : LP gagnés ou perdus par partie ---
+
+    /** Rang en SoloQ relevé {@code hours} heures après T0. */
+    private void soloRank(int hours, String division, int lp, int wins, int losses) {
+        rankSnapshotRepository.save(new RankSnapshot(RiotFixtures.PUUID, RankedQueue.RANKED_SOLO_5x5, "GOLD",
+                division, lp, wins, losses, T0.plus(Duration.ofHours(hours))));
+    }
+
+    private TestMatches result(int n, boolean win) {
+        return game(n).me(429, "Kalista", "BOTTOM", win, 6, 4, 3, 250, 19708);
+    }
+
+    @Test
+    void chaquePartieClasseeSeuleEntreDeuxRelevesAffichesSesLp() {
+        // Relevés à 0 h, 2 h et 4 h ; une partie (30 min) commence à 1 h, une autre à 3 h
+        soloRank(0, "II", 45, 10, 8);
+        soloRank(2, "II", 63, 11, 8);
+        soloRank(4, "II", 48, 11, 9);
+        save(result(1, true), result(3, false));
+
+        List<MatchSummaryResponse> items = service.getHistory(RiotFixtures.PUUID, 0, 10, null).items();
+
+        assertThat(items).extracting(MatchSummaryResponse::matchId, MatchSummaryResponse::lpChange)
+                .containsExactly(tuple("EUW1_3", -15), tuple("EUW1_1", 18));
+    }
+
+    @Test
+    void sansCertitudeLaVariationEstInconnue() {
+        // Deux parties entre deux relevés, et une partie normale (ARAM)
+        soloRank(0, "II", 45, 10, 8);
+        soloRank(5, "I", 10, 12, 8);
+        save(result(1, true), result(3, true), game(4).queue(450));
+
+        assertThat(service.getHistory(RiotFixtures.PUUID, 0, 10, null).items())
+                .extracting(MatchSummaryResponse::lpChange)
+                .containsOnlyNulls();
+    }
+
+    @Test
+    void sansRangReleveLaVariationEstInconnue() {
+        save(result(1, true));
+
+        assertThat(service.getHistory(RiotFixtures.PUUID, 0, 10, null).items().getFirst().lpChange()).isNull();
     }
 }

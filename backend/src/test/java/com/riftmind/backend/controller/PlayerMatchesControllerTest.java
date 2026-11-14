@@ -53,7 +53,7 @@ class PlayerMatchesControllerTest {
     void renvoieUnePageDHistorique() throws Exception {
         MatchSummaryResponse match = new MatchSummaryResponse("EUW1_7000000001", 420, "16.21.834.2754",
                 Instant.parse("2026-11-01T20:00:00Z"), 1463, false, kalista(),
-                List.of(new CompactParticipantResponse(PUUID, "Joueur Test", "EUW", 100, 429, "Kalista")));
+                List.of(new CompactParticipantResponse(PUUID, "Joueur Test", "EUW", 100, 429, "Kalista")), 18);
         when(matchQueryService.getHistory(PUUID, 0, 10, null))
                 .thenReturn(new MatchPageResponse(List.of(match), 0, 10, true));
 
@@ -65,6 +65,7 @@ class PlayerMatchesControllerTest {
                 .andExpect(jsonPath("$.hasMore").value(true))
                 .andExpect(jsonPath("$.items[0].matchId").value("EUW1_7000000001"))
                 .andExpect(jsonPath("$.items[0].queueId").value(420))
+                .andExpect(jsonPath("$.items[0].lpChange").value(18))
                 .andExpect(jsonPath("$.items[0].gameStart").value("2026-11-01T20:00:00Z"))
                 .andExpect(jsonPath("$.items[0].durationSeconds").value(1463))
                 .andExpect(jsonPath("$.items[0].remake").value(false))

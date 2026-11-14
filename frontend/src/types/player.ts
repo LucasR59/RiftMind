@@ -17,6 +17,31 @@ export interface LeagueEntry {
   hotStreak: boolean
 }
 
+/** Rang à un instant donné : un point du graphique d'évolution (miroir de RankPointResponse). */
+export interface RankPoint {
+  /** Date ISO 8601 où Riot a renvoyé ce rang */
+  recordedAt: string
+  tier: string
+  rank: string
+  leaguePoints: number
+  wins: number
+  losses: number
+  /** Rang converti en LP cumulés depuis Fer IV 0 LP (Maître 0 LP = 2 800) : l'axe vertical */
+  score: number
+}
+
+/**
+ * Évolution du rang dans une file, depuis que RiftMind suit le joueur (miroir de RankHistoryResponse). Riot ne
+ * fournit ni le MMR ni les rangs passés : ce sont les rangs vus à chaque recherche ou mise à jour.
+ */
+export interface RankHistory {
+  queueType: RankedQueue
+  /** Du plus ancien au plus récent, un point par changement */
+  points: RankPoint[]
+  /** Meilleur rang enregistré (le premier atteint en cas d'égalité) */
+  peak: RankPoint
+}
+
 /** Joueur renvoyé par la recherche par Riot ID et par la mise à jour. */
 export interface Player {
   /** Identifiant stable, pour les appels suivants (parties, stats…) */

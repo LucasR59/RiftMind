@@ -96,6 +96,26 @@ describe('MatchCard', () => {
     expect(slots.findAll('img')).toHaveLength(2)
     expect(slots.findAll('[data-testid="game-image-empty"]')).toHaveLength(5)
   })
+
+  it('affiche les LP gagnés ou perdus quand ils sont connus', () => {
+    const win = mountCard(fullMatch({ lpChange: 18 }))
+    const loss = mountCard(
+      fullMatch({ lpChange: -15, player: { ...matchSummary.player, win: false } }),
+    )
+
+    expect(win.find('[data-testid="match-lp"]').text()).toBe('+18 LP')
+    expect(win.find('[data-testid="match-lp"]').classes()).toContain('match-card__lp--up')
+    expect(win.attributes('aria-label')).toContain('+18 LP')
+    expect(loss.find('[data-testid="match-lp"]').text()).toBe('−15 LP')
+    expect(loss.find('[data-testid="match-lp"]').classes()).toContain('match-card__lp--down')
+  })
+
+  it("n'affiche rien quand la variation de LP est inconnue", () => {
+    const wrapper = mountCard(fullMatch({ lpChange: null }))
+
+    expect(wrapper.find('[data-testid="match-lp"]').exists()).toBe(false)
+    expect(wrapper.attributes('aria-label')).not.toContain('LP')
+  })
 })
 
 describe('MatchHistory', () => {

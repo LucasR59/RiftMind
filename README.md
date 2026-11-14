@@ -217,11 +217,26 @@ Au démarrage, les logs indiquent la copie :
 | `GET /api/players/{puuid}/matches?page=0&size=10&queue=420` | Historique paginé (du plus récent au plus ancien), lu en base. `queue` facultatif, `size` de 1 à 50 |
 | `GET /api/players/{puuid}/champions?queue=420` | Stats par champion (parties, winrate, KDA, CS/min, dégâts), hors remakes. `queue` facultatif |
 | `GET /api/players/{puuid}/summary` | Résumé des 20 dernières parties hors remakes : winrate, KDA moyen, rôles joués |
+| `GET /api/players/{puuid}/rank-history` | Évolution du rang par file (SoloQ puis Flex) et peak, depuis que RiftMind suit le joueur (voir ci-dessous) |
 | `GET /api/assets/ddragon/…`, `/api/assets/ranks/…` | Images et données du jeu, depuis la copie locale (voir « Images du jeu »). 404 hors liste blanche |
 
 - `platform` accepte l'identifiant Riot (`euw1`) ou l'abréviation (`EUW`), sans tenir compte de la casse.
 - `gameName` et `tagLine` sont encodés dans l'URL (`%20` pour un espace), et la casse est ignorée.
 - `ranks` contient la SoloQ puis la Flex, seulement pour les files où le joueur est classé : liste vide s'il ne l'est pas.
+- **Évolution du rang et peak** : Riot ne fournit ni le MMR ni les rangs passés, seulement le rang actuel. RiftMind
+  enregistre donc le rang à chaque fois qu'il change (première recherche, « Mettre à jour ») dans `rank_snapshot`.
+  L'historique commence à la première visite. Chaque point a un `score` : les LP cumulés depuis Fer IV 0 LP
+  (400 par palier, 100 par division, Maître 0 LP = 2 800, puis les LP). C'est l'axe vertical du graphique affiché
+  sous chaque carte de rang. L'axe horizontal compte les parties jouées, d'après le bilan de chaque point. Le peak est
+  le meilleur rang enregistré.
+- **LP par partie** (`lpChange` dans `/matches`) : Riot ne le fournit pas (Match-V5 n'a aucun champ de rang).
+  RiftMind l'attribue à une partie seulement si c'est certain (`LpChanges`) :
+  - le bilan a augmenté d'une seule partie entre deux relevés du rang ;
+  - une seule partie de cette file (hors remake) s'est terminée entre les deux, et elle est en base ;
+  - son résultat correspond au bilan.
+
+  Sinon `null` : jamais d'estimation. Plus le profil est mis à jour souvent (idéalement après chaque partie), plus de
+  parties ont leur variation.
 
 ```bash
 curl http://localhost:8080/api/players/euw1/Joueur%20Test/EUW   # remplacer par un vrai Riot ID

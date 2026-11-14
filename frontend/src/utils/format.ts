@@ -31,6 +31,40 @@ export function formatRelativeTime(iso: string, now: number): string {
   return dateFormat.format(time)
 }
 
+const shortDateFormat = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short' })
+const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/** Date courte, ex. « 12 oct. » (axe d'un graphique). */
+export function formatShortDate(iso: string): string {
+  const time = Date.parse(iso)
+  return Number.isNaN(time) ? '' : shortDateFormat.format(time)
+}
+
+const shortDateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/** Date et heure sans l'année, ex. « 12 oct. 18:05 » (tableaux étroits). */
+export function formatShortDateTime(iso: string): string {
+  const time = Date.parse(iso)
+  return Number.isNaN(time) ? '' : shortDateTimeFormat.format(time).replace(',', '')
+}
+
+/** Date et heure, ex. « 12 oct. 2026, 18:05 » (info-bulle, texte alternatif). */
+export function formatDateTime(iso: string): string {
+  const time = Date.parse(iso)
+  return Number.isNaN(time) ? '' : dateTimeFormat.format(time)
+}
+
 /** Durée d'une partie, ex. « 24:23 », « 1:02:03 ». */
 export function formatDuration(totalSeconds: number): string {
   const seconds = Math.max(0, Math.round(totalSeconds))

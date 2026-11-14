@@ -12,6 +12,8 @@ import java.util.List;
  * @param remake          partie terminée par un remake : à afficher à part, elle ne compte pas dans les stats
  * @param player          statistiques complètes du joueur dont c'est l'historique
  * @param participants    tous les joueurs de la partie (lui compris), équipe bleue puis rouge
+ * @param lpChange        LP gagnés (positif) ou perdus (négatif) dans cette partie classée, ou {@code null} si on ne
+ *                        le sait pas avec certitude (voir {@code LpChanges}) : Riot ne le fournit pas
  */
 public record MatchSummaryResponse(
         String matchId,
@@ -21,5 +23,6 @@ public record MatchSummaryResponse(
         int durationSeconds,
         boolean remake,
         ParticipantResponse player,
-        List<CompactParticipantResponse> participants) {
+        List<CompactParticipantResponse> participants,
+        Integer lpChange) {
 }

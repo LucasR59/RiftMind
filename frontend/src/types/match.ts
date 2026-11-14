@@ -65,6 +65,11 @@ export interface MatchSummary {
   player: Participant
   /** Tous les joueurs de la partie (lui compris), équipe bleue puis rouge */
   participants: CompactParticipant[]
+  /**
+   * LP gagnés (positif) ou perdus (négatif) dans cette partie classée, `null` si on ne le sait pas avec certitude :
+   * Riot ne le fournit pas, RiftMind le déduit de deux relevés du rang séparés par cette seule partie
+   */
+  lpChange: number | null
 }
 
 /** Une page de l'historique, de la partie la plus récente à la plus ancienne. */

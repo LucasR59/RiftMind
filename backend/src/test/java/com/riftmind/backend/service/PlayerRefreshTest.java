@@ -32,6 +32,7 @@ import com.riftmind.backend.exception.RefreshCooldownException;
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
 import com.riftmind.backend.repository.LeagueEntryRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.repository.MatchParticipantRepository;
 import com.riftmind.backend.repository.MatchRepository;
 import com.riftmind.backend.repository.PlayerRepository;
@@ -73,6 +74,9 @@ class PlayerRefreshTest {
     private LeagueEntryRepository leagueEntryRepository;
 
     @Autowired
+    private RankSnapshotRepository rankSnapshotRepository;
+
+    @Autowired
     private MatchRepository matchRepository;
 
     @Autowired
@@ -98,7 +102,8 @@ class PlayerRefreshTest {
 
     private PlayerService serviceAt(Instant instant) {
         Clock clock = Clock.fixed(instant, ZoneOffset.UTC);
-        LeagueService leagueService = new LeagueService(riotClient, leagueEntryRepository, transactionManager, clock);
+        LeagueService leagueService = new LeagueService(riotClient, leagueEntryRepository, rankSnapshotRepository,
+                transactionManager, clock);
         MatchIngestionService matchIngestionService = new MatchIngestionService(riotClient, matchRepository,
                 participantRepository, transactionManager, JsonMapper.builder().build(), clock);
         return new PlayerService(riotClient, playerRepository, leagueService, matchIngestionService, properties,

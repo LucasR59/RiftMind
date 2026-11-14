@@ -36,7 +36,9 @@ import com.riftmind.backend.CleanDatabase;
 import com.riftmind.backend.TestcontainersConfiguration;
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
+import com.riftmind.backend.model.RankSnapshot;
 import com.riftmind.backend.repository.LeagueEntryRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.repository.PlayerRepository;
 import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RankedQueue;
@@ -68,6 +70,9 @@ class LeagueServiceTest {
     private LeagueEntryRepository repository;
 
     @Autowired
+    private RankSnapshotRepository snapshotRepository;
+
+    @Autowired
     private PlayerRepository playerRepository;
 
     @Autowired
@@ -86,7 +91,8 @@ class LeagueServiceTest {
                 RiotProperties.RateLimit.defaults(), Duration.ofMinutes(2), Duration.ofSeconds(5),
                 Duration.ofSeconds(10));
         riotClient = new RiotClient(builder, properties, new RiotRateLimiter(properties.rateLimit()));
-        service = new LeagueService(riotClient, repository, transactionManager, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new LeagueService(riotClient, repository, snapshotRepository, transactionManager,
+                Clock.fixed(NOW, ZoneOffset.UTC));
         player = playerRepository.save(new Player(RiotFixtures.PUUID, RiotFixtures.GAME_NAME, RiotFixtures.TAG_LINE,
                 Platform.EUW1, 512, 7, NOW.minus(Duration.ofDays(1))));
     }
@@ -244,9 +250,90 @@ class LeagueServiceTest {
                 .thenThrow(new DuplicateKeyException("duplicate key value violates league_entry_pkey"));
         riotResponds(RiotFixtures.read(RiotFixtures.LEAGUE_ENTRIES));
 
-        List<LeagueEntry> entries = new LeagueService(riotClient, racingRepository, transactionManager,
-                Clock.fixed(NOW, ZoneOffset.UTC)).refresh(player);
+        List<LeagueEntry> entries = new LeagueService(riotClient, racingRepository, snapshotRepository,
+                transactionManager, Clock.fixed(NOW, ZoneOffset.UTC)).refresh(player);
 
         assertThat(entries).containsExactly(savedByOtherRequest);
+    }
+
+    // --- Historique des rangs (tâche 7.10)
+
+    private List<RankSnapshot> history() {
+        return snapshotRepository.findByPuuidOrderByRecordedAtAscIdAsc(RiotFixtures.PUUID);
+    }
+
+    private static LeagueEntryDto solo(String tier, String rank, int leaguePoints, int wins, int losses) {
+        return new LeagueEntryDto("RANKED_SOLO_5x5", tier, rank, leaguePoints, wins, losses, false);
+    }
+
+    @Test
+    void chaqueFileClasseeAjouteUnPointAlHistorique() {
+        riotResponds(RiotFixtures.read(RiotFixtures.LEAGUE_ENTRIES));
+
+        service.refresh(player);
+
+        assertThat(history()).singleElement().satisfies(snapshot -> {
+            assertThat(snapshot.getQueueType()).isEqualTo(RankedQueue.RANKED_SOLO_5x5);
+            assertThat(snapshot.getTier()).isEqualTo("CHALLENGER");
+            assertThat(snapshot.getLeaguePoints()).isEqualTo(1234);
+            assertThat(snapshot.getWins()).isEqualTo(250);
+            assertThat(snapshot.getRecordedAt()).isEqualTo(NOW);
+        });
+    }
+
+    @Test
+    void unRangInchangeNAjouteRien() {
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "II", 45, 10, 8)), NOW.minus(Duration.ofHours(2)));
+
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "II", 45, 10, 8)), NOW);
+
+        assertThat(history()).hasSize(1);
+    }
+
+    @Test
+    void unChangementDeLpDeRangOuDeBilanAjouteUnPoint() {
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "II", 45, 10, 8)), NOW.minus(Duration.ofHours(3)));
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "II", 65, 11, 8)), NOW.minus(Duration.ofHours(2)));
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "I", 5, 12, 8)), NOW.minus(Duration.ofHours(1)));
+        // Défaite à 0 LP : les LP ne bougent pas, mais le bilan si
+        service.save(RiotFixtures.PUUID, List.of(solo("GOLD", "I", 5, 12, 9)), NOW);
+
+        assertThat(history()).extracting(RankSnapshot::getRank, RankSnapshot::getLeaguePoints, RankSnapshot::getLosses)
+                .containsExactly(tuple("II", 45, 8), tuple("II", 65, 8), tuple("I", 5, 8), tuple("I", 5, 9));
+    }
+
+    @Test
+    void lesFilesOntChacuneLeurHistorique() {
+        storeSoloAndFlex();
+
+        service.save(RiotFixtures.PUUID, List.of(
+                new LeagueEntryDto("RANKED_FLEX_SR", "GOLD", "II", 45, 12, 10, false),
+                new LeagueEntryDto("RANKED_SOLO_5x5", "MASTER", "I", 120, 101, 90, false)), NOW);
+
+        assertThat(history()).extracting(RankSnapshot::getQueueType, RankSnapshot::getLeaguePoints)
+                .containsExactlyInAnyOrder(
+                        tuple(RankedQueue.RANKED_FLEX_SR, 45),
+                        tuple(RankedQueue.RANKED_SOLO_5x5, 80),
+                        tuple(RankedQueue.RANKED_SOLO_5x5, 120));
+    }
+
+    @Test
+    void uneFileQuitteeGardeSonHistorique() {
+        storeSoloAndFlex();
+
+        service.save(RiotFixtures.PUUID, List.of(solo("MASTER", "I", 80, 100, 90)), NOW);
+
+        assertThat(service.findByPuuid(RiotFixtures.PUUID)).hasSize(1);
+        assertThat(history()).extracting(RankSnapshot::getQueueType)
+                .containsExactlyInAnyOrder(RankedQueue.RANKED_FLEX_SR, RankedQueue.RANKED_SOLO_5x5);
+    }
+
+    @Test
+    void unJoueurNonClasseNAPasDHistorique() {
+        riotResponds(RiotFixtures.read(RiotFixtures.LEAGUE_ENTRIES_UNRANKED));
+
+        service.refresh(player);
+
+        assertThat(history()).isEmpty();
     }
 }

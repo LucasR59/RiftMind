@@ -11,6 +11,7 @@ import { queueInfo } from '@/constants/queues'
 import { playerRoute } from '@/router/links'
 import type { CompactParticipant, MatchSummary } from '@/types/match'
 import { formatDuration, formatKdaRatio, formatNumber, formatRelativeTime } from '@/utils/format'
+import { formatLpChange, lpDirection } from '@/utils/rankScale'
 
 /** Une partie de l'historique, du point de vue du joueur du profil. */
 const props = defineProps<{
@@ -36,6 +37,15 @@ const result = computed(() => {
   return me.value.win ? { key: 'win', label: 'Victoire' } : { key: 'loss', label: 'Défaite' }
 })
 const queue = computed(() => queueInfo(props.match.queueId))
+/** LP gagnés ou perdus, seulement quand le backend les connaît avec certitude. */
+const lpChange = computed(() =>
+  props.match.lpChange === null || props.match.lpChange === undefined
+    ? null
+    : {
+        label: formatLpChange(props.match.lpChange),
+        direction: lpDirection(props.match.lpChange),
+      },
+)
 const csPerMinute = computed(() =>
   props.match.durationSeconds > 0 ? me.value.cs / (props.match.durationSeconds / 60) : 0,
 )
@@ -53,7 +63,7 @@ const teams = computed(() => {
   <article
     class="match-card"
     :class="`match-card--${result.key}`"
-    :aria-label="`${result.label} en ${queue.label}, ${me.championName}`"
+    :aria-label="`${result.label} en ${queue.label}, ${me.championName}${lpChange ? `, ${lpChange.label}` : ''}`"
     data-testid="match-card"
   >
     <div class="match-card__row">
@@ -65,6 +75,15 @@ const teams = computed(() => {
           </time>
         </p>
         <p class="match-card__result" data-testid="match-result">{{ result.label }}</p>
+        <p
+          v-if="lpChange"
+          class="match-card__lp"
+          :class="`match-card__lp--${lpChange.direction}`"
+          title="Variation du rang relevée avant et après cette partie"
+          data-testid="match-lp"
+        >
+          {{ lpChange.label }}
+        </p>
         <p class="match-card__duration">{{ formatDuration(match.durationSeconds) }}</p>
       </div>
 
@@ -220,6 +239,25 @@ const teams = computed(() => {
 .match-card__result {
   margin-top: 0.3rem;
   font-weight: 700;
+}
+
+/* Le signe porte le sens (+ / −) : la couleur ne fait que le souligner */
+.match-card__lp {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-card__lp--up {
+  color: var(--color-success);
+}
+
+.match-card__lp--down {
+  color: var(--color-danger);
+}
+
+.match-card__lp--flat {
+  color: var(--color-text-muted);
 }
 
 .match-card__loadout {

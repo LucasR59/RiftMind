@@ -1,5 +1,6 @@
 package com.riftmind.backend.repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.riftmind.backend.model.ChampionStatsRow;
 import com.riftmind.backend.model.MatchParticipant;
+import com.riftmind.backend.model.RankedGame;
 
 /** Accès à la table {@code match_participant}. La clé est le couple (match, numéro du participant). */
 public interface MatchParticipantRepository extends JpaRepository<MatchParticipant, MatchParticipant.Key> {
@@ -60,6 +62,18 @@ public interface MatchParticipantRepository extends JpaRepository<MatchParticipa
             order by count(p) desc, max(p.championName)
             """)
     List<ChampionStatsRow> findChampionStats(String puuid, Integer queueId);
+
+    /**
+     * Parties du joueur dans ces files, commencées à partir de {@code since}, remakes compris (index
+     * {@code (puuid, game_start desc)}). Sert à attribuer les gains et pertes de LP aux parties.
+     */
+    @Query("""
+            select new com.riftmind.backend.model.RankedGame(
+                p.matchId, p.queueId, p.gameStart, m.durationSeconds, p.win, m.remake)
+            from MatchParticipant p join Match m on m.matchId = p.matchId
+            where p.puuid = :puuid and p.queueId in :queueIds and p.gameStart >= :since
+            """)
+    List<RankedGame> findRankedGames(String puuid, Collection<Integer> queueIds, Instant since);
 
     /** Dernières participations du joueur hors remakes, de la plus récente à la plus ancienne (toutes files). */
     @Query("""

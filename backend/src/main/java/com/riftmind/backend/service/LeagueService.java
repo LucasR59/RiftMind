@@ -20,7 +20,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.riftmind.backend.model.LeagueEntry;
 import com.riftmind.backend.model.Player;
+import com.riftmind.backend.model.RankSnapshot;
 import com.riftmind.backend.repository.LeagueEntryRepository;
+import com.riftmind.backend.repository.RankSnapshotRepository;
 import com.riftmind.backend.riot.Platform;
 import com.riftmind.backend.riot.RankedQueue;
 import com.riftmind.backend.riot.RiotClient;
@@ -47,13 +49,16 @@ public class LeagueService {
 
     private final RiotClient riotClient;
     private final LeagueEntryRepository leagueEntryRepository;
+    private final RankSnapshotRepository rankSnapshotRepository;
     private final TransactionTemplate transaction;
     private final Clock clock;
 
     public LeagueService(RiotClient riotClient, LeagueEntryRepository leagueEntryRepository,
-            PlatformTransactionManager transactionManager, Clock clock) {
+            RankSnapshotRepository rankSnapshotRepository, PlatformTransactionManager transactionManager,
+            Clock clock) {
         this.riotClient = riotClient;
         this.leagueEntryRepository = leagueEntryRepository;
+        this.rankSnapshotRepository = rankSnapshotRepository;
         this.transaction = new TransactionTemplate(transactionManager);
         this.clock = clock;
     }
@@ -134,7 +139,23 @@ public class LeagueService {
         List<LeagueEntry> result = leagueEntryRepository.saveAll(saved);
         // Écrit tout de suite pour que les erreurs (clé dupliquée…) sortent ici, déjà traduites par Spring
         leagueEntryRepository.flush();
+        recordChanges(result, fetchedAt);
         return result.stream().sorted(BY_QUEUE).toList();
+    }
+
+    /**
+     * Historique des rangs (tâche 7.10) : ajoute une ligne à {@code rank_snapshot} pour chaque file dont le rang ou le
+     * bilan a changé depuis la dernière ligne. Même transaction que les rangs : tout est enregistré, ou rien.
+     */
+    private void recordChanges(List<LeagueEntry> entries, Instant fetchedAt) {
+        List<RankSnapshot> changes = entries.stream()
+                .filter(entry -> rankSnapshotRepository
+                        .findFirstByPuuidAndQueueTypeOrderByRecordedAtDescIdDesc(entry.getPuuid(), entry.getQueueType())
+                        .map(last -> last.differsFrom(entry))
+                        .orElse(true))
+                .map(entry -> RankSnapshot.of(entry, fetchedAt))
+                .toList();
+        rankSnapshotRepository.saveAll(changes);
     }
 
     /** Garde les files affichées par RiftMind, une entrée par file. */

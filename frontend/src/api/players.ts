@@ -1,5 +1,5 @@
 import { apiGet, apiPost, query, segment } from './http'
-import type { Player } from '@/types/player'
+import type { Player, RankHistory } from '@/types/player'
 import type { ChampionStats, PlayerSummary } from '@/types/stats'
 
 /**
@@ -29,3 +29,7 @@ export const getChampionStats = (puuid: string, queue?: number) =>
 /** Résumé des 20 dernières parties, hors remakes. */
 export const getPlayerSummary = (puuid: string) =>
   apiGet<PlayerSummary>(`/players/${segment(puuid)}/summary`)
+
+/** Évolution du rang et peak, une entrée par file classée (SoloQ puis Flex). Jamais classé : liste vide. */
+export const getRankHistory = (puuid: string) =>
+  apiGet<RankHistory[]>(`/players/${segment(puuid)}/rank-history`)

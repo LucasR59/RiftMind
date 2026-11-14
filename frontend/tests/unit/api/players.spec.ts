@@ -1,8 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 
-import { getChampionStats, getPlayer, getPlayerSummary, refreshPlayer } from '@/api/players'
+import {
+  getChampionStats,
+  getPlayer,
+  getPlayerSummary,
+  getRankHistory,
+  refreshPlayer,
+} from '@/api/players'
 import { ApiError } from '@/api/http'
-import { championStats, jsonResponse, player, playerSummary, PUUID } from '../../fixtures/api'
+import {
+  championStats,
+  jsonResponse,
+  player,
+  playerSummary,
+  PUUID,
+  soloHistory,
+} from '../../fixtures/api'
 
 const mockFetch = (body: unknown, status = 200) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(body, status))
@@ -78,5 +91,12 @@ describe('statistiques', () => {
 
     expect(await getPlayerSummary(PUUID)).toEqual(playerSummary)
     expect(calledUrl(fetchMock)).toBe(`/api/players/${PUUID}/summary`)
+  })
+
+  it("demande l'évolution du rang", async () => {
+    const fetchMock = mockFetch([soloHistory])
+
+    expect(await getRankHistory(PUUID)).toEqual([soloHistory])
+    expect(calledUrl(fetchMock)).toBe(`/api/players/${PUUID}/rank-history`)
   })
 })

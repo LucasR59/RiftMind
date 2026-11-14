@@ -5,7 +5,7 @@ import { createMemoryHistory } from 'vue-router'
 
 import PlayerView from '@/views/PlayerView.vue'
 import { ApiError } from '@/api/http'
-import { getChampionStats, getPlayer, getPlayerSummary } from '@/api/players'
+import { getChampionStats, getPlayer, getPlayerSummary, getRankHistory } from '@/api/players'
 import { getPlayerMatches } from '@/api/matches'
 import { reloadRecentSearches, useRecentSearches } from '@/composables/useRecentSearches'
 import { createAppRouter } from '@/router'
@@ -26,6 +26,7 @@ async function mountAt(path: string) {
 beforeEach(() => {
   vi.mocked(getPlayerMatches).mockResolvedValue({ ...matchPage, hasMore: false })
   vi.mocked(getPlayerSummary).mockResolvedValue(playerSummary)
+  vi.mocked(getRankHistory).mockResolvedValue([])
   localStorage.clear()
   reloadRecentSearches()
 })
